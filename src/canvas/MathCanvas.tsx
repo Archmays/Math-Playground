@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import type { SceneObject } from "../core/scene";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent
+} from "react";
+import type { BoundingBox, SceneObject } from "../core/scene";
 import { useScene } from "../features/workspace/SceneProvider";
 import { GridLayer } from "./GridLayer";
 import { ObjectLayer } from "./ObjectLayer";
@@ -9,7 +16,13 @@ import {
   type SelectionHandle
 } from "./SelectionLayer";
 import { ViewportControls } from "./ViewportControls";
-import { ZOOM_STEP, getSvgPointFromEvent, screenToWorld } from "./canvasUtils";
+import {
+  ZOOM_STEP,
+  getObjectIdsIntersectingBox,
+  getSvgPointFromEvent,
+  normalizeRectFromPoints,
+  screenToWorld
+} from "./canvasUtils";
 import type { CanvasSize, Point } from "./canvasTypes";
 import { snapRotationAngle } from "../manipulatives/geometryTiles/geometryTiles";
 
@@ -18,11 +31,19 @@ const defaultCanvasSize: CanvasSize = {
   height: 540
 };
 const MIN_OBJECT_SIZE = 24;
+const MARQUEE_DRAG_THRESHOLD = 4;
 
 type DragState =
   | {
       mode: "pan";
       lastPointer: Point;
+    }
+  | {
+      mode: "marquee";
+      startPointer: Point;
+      startScreenPointer: Point;
+      currentPointer: Point;
+      hasDragged: boolean;
     }
   | {
       mode: "objects";
@@ -56,6 +77,7 @@ export function MathCanvas() {
     zoomAt,
     resetViewport,
     selectObject,
+    selectObjects,
     toggleSelectObject,
     clearSelection,
     moveObjects,
@@ -74,6 +96,7 @@ export function MathCanvas() {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragStateRef = useRef<DragState>(null);
   const [canvasSize, setCanvasSize] = useState(defaultCanvasSize);
+  const [marqueeBox, setMarqueeBox] = useState<BoundingBox | null>(null);
 
   const selectedObjects = useMemo(
     () =>
@@ -195,6 +218,43 @@ export function MathCanvas() {
     );
   };
 
+  const finishDrag = useCallback(() => {
+    const dragState = dragStateRef.current;
+
+    if (dragState?.mode === "marquee") {
+      if (dragState.hasDragged) {
+        selectObjects(
+          getObjectIdsIntersectingBox(
+            scene.objects,
+            normalizeRectFromPoints(dragState.startPointer, dragState.currentPointer)
+          )
+        );
+      } else {
+        clearSelection();
+      }
+      setMarqueeBox(null);
+    }
+
+    dragStateRef.current = null;
+  }, [clearSelection, scene.objects, selectObjects]);
+
+  const cancelDrag = useCallback(() => {
+    setMarqueeBox(null);
+    dragStateRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("pointerup", finishDrag);
+    window.addEventListener("mouseup", finishDrag);
+    window.addEventListener("touchend", finishDrag);
+
+    return () => {
+      window.removeEventListener("pointerup", finishDrag);
+      window.removeEventListener("mouseup", finishDrag);
+      window.removeEventListener("touchend", finishDrag);
+    };
+  }, [finishDrag]);
+
   const handleObjectPointerDown = (
     event: PointerEvent<SVGGElement>,
     objectId: string
@@ -304,13 +364,28 @@ export function MathCanvas() {
             return;
           }
 
+          const svg = svgRef.current;
+
+          if (!svg) {
+            return;
+          }
+
+          const startPointer = screenToWorld(
+            getSvgPointFromEvent(event.nativeEvent, svg),
+            scene.viewport
+          );
+
           clearSelection();
+          setMarqueeBox(null);
           dragStateRef.current = {
-            mode: "pan",
-            lastPointer: {
+            mode: "marquee",
+            startPointer,
+            startScreenPointer: {
               x: event.clientX,
               y: event.clientY
-            }
+            },
+            currentPointer: startPointer,
+            hasDragged: false
           };
           event.currentTarget.setPointerCapture(event.pointerId);
         }}
@@ -332,6 +407,34 @@ export function MathCanvas() {
               y: nextPointer.y - dragState.lastPointer.y
             };
             pan(screenDelta);
+          } else if (dragState.mode === "marquee") {
+            const svg = svgRef.current;
+
+            if (!svg) {
+              return;
+            }
+
+            const worldPointer = screenToWorld(
+              getSvgPointFromEvent(event.nativeEvent, svg),
+              scene.viewport
+            );
+            const screenDistance = Math.hypot(
+              nextPointer.x - dragState.startScreenPointer.x,
+              nextPointer.y - dragState.startScreenPointer.y
+            );
+            const hasDragged =
+              dragState.hasDragged || screenDistance >= MARQUEE_DRAG_THRESHOLD;
+
+            dragStateRef.current = {
+              ...dragState,
+              currentPointer: worldPointer,
+              hasDragged
+            };
+            setMarqueeBox(
+              hasDragged
+                ? normalizeRectFromPoints(dragState.startPointer, worldPointer)
+                : null
+            );
           } else if (dragState.mode === "objects") {
             moveObjectsFromStart(dragState.objectIds, dragState.startPositions, {
               x: (nextPointer.x - dragState.startPointer.x) / scene.viewport.zoom,
@@ -369,12 +472,9 @@ export function MathCanvas() {
             };
           }
         }}
-        onPointerUp={() => {
-          dragStateRef.current = null;
-        }}
-        onPointerCancel={() => {
-          dragStateRef.current = null;
-        }}
+        onPointerUp={finishDrag}
+        onLostPointerCapture={finishDrag}
+        onPointerCancel={cancelDrag}
       >
         <rect
           className="canvas-background"
@@ -394,6 +494,21 @@ export function MathCanvas() {
           onObjectPointerDown={handleObjectPointerDown}
           onTenFrameCellPointerDown={handleTenFrameCellPointerDown}
         />
+        {marqueeBox ? (
+          <g
+            className="marquee-layer"
+            transform={`translate(${-scene.viewport.x * scene.viewport.zoom} ${-scene.viewport.y * scene.viewport.zoom}) scale(${scene.viewport.zoom})`}
+            aria-hidden="true"
+          >
+            <rect
+              className="marquee-selection"
+              x={marqueeBox.x}
+              y={marqueeBox.y}
+              width={marqueeBox.width}
+              height={marqueeBox.height}
+            />
+          </g>
+        ) : null}
         <SelectionLayer
           selectedObjects={selectedObjects}
           viewport={scene.viewport}

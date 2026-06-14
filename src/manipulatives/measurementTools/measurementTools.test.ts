@@ -5,7 +5,9 @@ import {
   createMeasurementTool,
   formatDegreeLabel,
   generateRulerTicks,
-  normalizeAngle
+  normalizeAngle,
+  normalizeProtractorAngle,
+  updateMeasurementToolData
 } from "./measurementTools";
 
 describe("measurement tools", () => {
@@ -32,6 +34,25 @@ describe("measurement tools", () => {
       { offset: 24, major: false, label: "" },
       { offset: 32, major: true, label: "2" }
     ]);
+  });
+
+  it("clamps protractor angles to a 0 through 180 degree reading", () => {
+    expect(normalizeProtractorAngle(-30)).toBe(0);
+    expect(normalizeProtractorAngle(90.4)).toBe(90);
+    expect(normalizeProtractorAngle(220)).toBe(180);
+    expect(normalizeProtractorAngle(Number.NaN)).toBe(0);
+  });
+
+  it("keeps protractor updates within the readable half-circle range", () => {
+    const protractor = createMeasurementTool({
+      id: "protractor-1",
+      kind: "protractor",
+      angle: 45
+    });
+
+    const updated = updateMeasurementToolData(protractor, { angle: 240 });
+
+    expect(updated.data.angle).toBe(180);
   });
 
   it("serializes and deserializes MeasurementTool data through scene JSON", () => {

@@ -80,6 +80,7 @@ export type WorkspaceAction =
   | { type: "setSelectedBalanceScaleSideFromNumberTiles"; side: "left" | "right" }
   | { type: "toggleTenFrameCell"; objectId: string; cellIndex: number }
   | { type: "selectObject"; objectId: string }
+  | { type: "selectObjects"; objectIds: string[] }
   | { type: "toggleSelectObject"; objectId: string }
   | { type: "clearSelection" }
   | { type: "moveObjects"; objectIds: string[]; delta: Point }
@@ -156,6 +157,8 @@ export function workspaceReducer(
       return toggleTenFrameCell(state, action.objectId, action.cellIndex);
     case "selectObject":
       return selectObject(state, action.objectId);
+    case "selectObjects":
+      return selectObjects(state, action.objectIds);
     case "toggleSelectObject":
       return toggleSelectObject(state, action.objectId);
     case "clearSelection":
@@ -501,6 +504,22 @@ export function selectObject(
   return {
     ...state,
     selectedObjectIds: hasSelectableObject(state.scene, objectId) ? [objectId] : []
+  };
+}
+
+export function selectObjects(
+  state: WorkspaceState,
+  objectIds: string[]
+): WorkspaceState {
+  const selectedObjectIds = objectIds.filter(
+    (objectId, index) =>
+      objectIds.indexOf(objectId) === index &&
+      hasSelectableObject(state.scene, objectId)
+  );
+
+  return {
+    ...state,
+    selectedObjectIds
   };
 }
 

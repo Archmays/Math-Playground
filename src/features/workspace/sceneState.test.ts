@@ -21,6 +21,7 @@ import {
   moveObject,
   moveObjectsFromStart,
   selectObject,
+  selectObjects,
   setSelectedBalanceScaleSideFromNumberTiles,
   toggleSelectObject,
   toggleTenFrameCell,
@@ -290,6 +291,27 @@ describe("workspace scene selection state", () => {
     const state = selectObject(createState(), "rect-1");
 
     expect(state.selectedObjectIds).toEqual(["rect-1"]);
+  });
+
+  it("selectObjects selects multiple visible objects", () => {
+    const state = selectObjects(createState(), ["rect-1", "circle-1"]);
+
+    expect(state.selectedObjectIds).toEqual(["rect-1", "circle-1"]);
+  });
+
+  it("selectObjects filters missing and hidden objects", () => {
+    const hidden = updateSelectedObjects(selectObject(createState(), "rect-1"), {
+      visible: false
+    });
+    const state = selectObjects(hidden, ["rect-1", "circle-1", "missing"]);
+
+    expect(state.selectedObjectIds).toEqual(["circle-1"]);
+  });
+
+  it("selectObjects clears selection for an empty list", () => {
+    const selected = toggleSelectObject(selectObject(createState(), "rect-1"), "circle-1");
+
+    expect(selectObjects(selected, []).selectedObjectIds).toEqual([]);
   });
 
   it("toggleSelectObject adds and removes objects from a multi-selection", () => {

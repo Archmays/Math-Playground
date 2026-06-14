@@ -65,7 +65,7 @@ export function createMeasurementTool(
 ): SceneObject<MeasurementToolData> {
   const kind = options.kind ?? "ruler";
   const length = normalizeLength(options.length ?? getDefaultLength(kind));
-  const angle = normalizeAngle(options.angle ?? 0);
+  const angle = normalizeMeasurementAngle(kind, options.angle ?? 0);
   const startPoint = options.startPoint ?? { x: 0, y: 0 };
   const endPoint = options.endPoint ?? { x: length, y: 0 };
   const size = getDefaultSize(kind, length);
@@ -97,7 +97,7 @@ export function updateMeasurementToolData(
 ): SceneObject<MeasurementToolData> {
   const kind = data.kind ?? object.data.kind;
   const length = normalizeLength(data.length ?? object.data.length);
-  const angle = normalizeAngle(data.angle ?? object.data.angle);
+  const angle = normalizeMeasurementAngle(kind, data.angle ?? object.data.angle);
   const size = getDefaultSize(kind, length);
   const nextData: MeasurementToolData = {
     ...object.data,
@@ -125,6 +125,21 @@ export function normalizeAngle(angle: number): number {
   }
 
   return ((Math.round(angle) % 360) + 360) % 360;
+}
+
+export function normalizeProtractorAngle(angle: number): number {
+  if (!Number.isFinite(angle)) {
+    return 0;
+  }
+
+  return Math.min(180, Math.max(0, Math.round(angle)));
+}
+
+function normalizeMeasurementAngle(
+  kind: MeasurementToolKind,
+  angle: number
+): number {
+  return kind === "protractor" ? normalizeProtractorAngle(angle) : normalizeAngle(angle);
 }
 
 export function formatDegreeLabel(angle: number): string {

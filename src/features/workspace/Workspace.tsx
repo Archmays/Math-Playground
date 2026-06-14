@@ -781,11 +781,13 @@ function NumberPropertyField({
   label,
   value,
   min,
+  max,
   onChange
 }: {
   label: string;
   value: number;
   min?: number;
+  max?: number;
   onChange: (value: number) => void;
 }) {
   return (
@@ -794,6 +796,7 @@ function NumberPropertyField({
       <input
         type="number"
         min={min}
+        max={max}
         step="0.01"
         value={formatNumber(value)}
         onChange={(event) => {
@@ -803,7 +806,9 @@ function NumberPropertyField({
             return;
           }
 
-          onChange(min === undefined ? nextValue : Math.max(min, nextValue));
+          const minValue =
+            min === undefined ? nextValue : Math.max(min, nextValue);
+          onChange(max === undefined ? minValue : Math.min(max, minValue));
         }}
       />
     </label>
@@ -1235,6 +1240,7 @@ function MeasurementToolInspectorFields({
         label="角度"
         value={object.data.angle}
         min={0}
+        max={object.data.kind === "protractor" ? 180 : undefined}
         onChange={(value) => updateData({ angle: value })}
       />
       <label className="property-field">

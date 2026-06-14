@@ -1,3 +1,5 @@
+import { getBoundingBox } from "../core/geometry";
+import type { BoundingBox, SceneObject } from "../core/scene";
 import type { Point, Viewport } from "./canvasTypes";
 
 export const MIN_ZOOM = 0.25;
@@ -39,6 +41,36 @@ export function panViewport(viewport: Viewport, screenDelta: Point): Viewport {
     y: viewport.y - screenDelta.y / viewport.zoom,
     zoom: viewport.zoom
   };
+}
+
+export function normalizeRectFromPoints(start: Point, end: Point): BoundingBox {
+  const x = Math.min(start.x, end.x);
+  const y = Math.min(start.y, end.y);
+
+  return {
+    x,
+    y,
+    width: Math.abs(end.x - start.x),
+    height: Math.abs(end.y - start.y)
+  };
+}
+
+export function boxesIntersect(a: BoundingBox, b: BoundingBox): boolean {
+  return (
+    a.x <= b.x + b.width &&
+    a.x + a.width >= b.x &&
+    a.y <= b.y + b.height &&
+    a.y + a.height >= b.y
+  );
+}
+
+export function getObjectIdsIntersectingBox(
+  objects: SceneObject[],
+  box: BoundingBox
+): string[] {
+  return objects
+    .filter((object) => object.visible && boxesIntersect(getBoundingBox(object), box))
+    .map((object) => object.id);
 }
 
 export function clampZoom(zoom: number): number {

@@ -37,6 +37,7 @@ interface SceneContextValue {
   setSelectedBalanceScaleLeftFromNumberTiles: () => void;
   setSelectedBalanceScaleRightFromNumberTiles: () => void;
   selectObject: (objectId: string) => void;
+  selectObjects: (objectIds: string[]) => void;
   toggleSelectObject: (objectId: string) => void;
   clearSelection: () => void;
   moveObjects: (objectIds: string[], delta: Point) => void;
@@ -128,6 +129,10 @@ export function SceneProvider({ children }: { children: ReactNode }) {
 
   const selectObject = useCallback((objectId: string) => {
     dispatch({ type: "selectObject", objectId });
+  }, []);
+
+  const selectObjects = useCallback((objectIds: string[]) => {
+    dispatch({ type: "selectObjects", objectIds });
   }, []);
 
   const toggleSelectObject = useCallback((objectId: string) => {
@@ -228,6 +233,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       setSelectedBalanceScaleLeftFromNumberTiles,
       setSelectedBalanceScaleRightFromNumberTiles,
       selectObject,
+      selectObjects,
       toggleSelectObject,
       clearSelection,
       moveObjects,
@@ -272,6 +278,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       redo,
       resetViewport,
       selectObject,
+      selectObjects,
       setViewport,
       state.scene,
       state.selectedObjectIds,

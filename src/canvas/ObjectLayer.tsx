@@ -30,6 +30,7 @@ import {
   formatDegreeLabel,
   generateRulerTicks,
   isMeasurementToolObject,
+  normalizeProtractorAngle,
   type MeasurementToolData
 } from "../manipulatives/measurementTools/measurementTools";
 import {
@@ -509,6 +510,27 @@ function ProtractorObject({
   const center = { x: box.x + box.width / 2, y: box.y + box.height - 8 };
   const radius = Math.min(box.width / 2 - 8, box.height - 16);
   const ticks = Array.from({ length: 19 }, (_value, index) => index * 10);
+  const readingAngle = normalizeProtractorAngle(object.data.angle);
+  const readingRadius = Math.max(24, radius - 20);
+  const readingEnd = pointOnCircle(
+    center.x,
+    center.y,
+    readingRadius,
+    180 - readingAngle
+  );
+  const readingLabelPoint = pointOnCircle(
+    center.x,
+    center.y,
+    Math.max(32, radius - 46),
+    180 - readingAngle / 2
+  );
+  const readingArcRadius = Math.max(22, radius - 36);
+  const readingArcEnd = pointOnCircle(
+    center.x,
+    center.y,
+    readingArcRadius,
+    180 - readingAngle
+  );
 
   return (
     <>
@@ -522,6 +544,25 @@ function ProtractorObject({
         y1={center.y}
         x2={center.x + radius}
         y2={center.y}
+      />
+      <line
+        className="measurement-protractor-reading-ray"
+        x1={center.x}
+        y1={center.y}
+        x2={readingEnd.x}
+        y2={readingEnd.y}
+      />
+      {readingAngle > 0 ? (
+        <path
+          className="measurement-protractor-reading-arc"
+          d={`M ${center.x - readingArcRadius} ${center.y} A ${readingArcRadius} ${readingArcRadius} 0 0 1 ${readingArcEnd.x} ${readingArcEnd.y}`}
+        />
+      ) : null}
+      <circle
+        className="measurement-protractor-center"
+        cx={center.x}
+        cy={center.y}
+        r={4}
       />
       {object.data.showTicks
         ? ticks.map((angle) => {
@@ -567,12 +608,12 @@ function ProtractorObject({
       {object.data.showLabel ? (
         <text
           className="measurement-tool-label"
-          x={center.x}
-          y={center.y - radius / 2}
+          x={readingLabelPoint.x}
+          y={readingLabelPoint.y}
           dominantBaseline="middle"
           textAnchor="middle"
         >
-          量角器
+          {formatDegreeLabel(readingAngle)}
         </text>
       ) : null}
     </>

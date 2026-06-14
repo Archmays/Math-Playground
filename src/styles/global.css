@@ -518,6 +518,8 @@ textarea:focus-visible,
 .scene-object-selected .geometry-tile-shape,
 .scene-object-selected .measurement-ruler-body,
 .scene-object-selected .measurement-protractor-body,
+.scene-object-selected .measurement-protractor-reading-ray,
+.scene-object-selected .measurement-protractor-reading-arc,
 .scene-object-selected .measurement-angle-arc,
 .scene-object-selected .measurement-line-segment,
 .scene-object-selected .balance-scale-beam,
@@ -737,6 +739,30 @@ textarea:focus-visible,
   vector-effect: non-scaling-stroke;
 }
 
+.measurement-protractor-reading-ray {
+  stroke: #d6782f;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-protractor-reading-arc {
+  fill: none;
+  stroke: #d6782f;
+  stroke-width: 2.2;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-protractor-center {
+  fill: #ffffff;
+  stroke: #d6782f;
+  stroke-width: 2;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
 .measurement-angle-ray {
   stroke: #4f6473;
   stroke-width: 2;
@@ -831,6 +857,14 @@ textarea:focus-visible,
   stroke: #2f7f95;
   stroke-dasharray: 7 4;
   stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.marquee-selection {
+  fill: rgb(47 127 149 / 12%);
+  stroke: #2f7f95;
+  stroke-dasharray: 7 4;
+  stroke-width: 2;
   vector-effect: non-scaling-stroke;
 }
 
@@ -1039,8 +1073,8 @@ textarea:focus-visible,
 }
 
 .viewport-controls button {
-  min-width: 40px;
-  height: 38px;
+  min-width: 44px;
+  height: 44px;
   border: 1px solid #c9d6dd;
   border-radius: 6px;
   color: #243447;
@@ -1074,10 +1108,10 @@ textarea:focus-visible,
   font-size: 13px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1024px) {
   .workspace {
     grid-template-columns: 180px minmax(0, 1fr);
-    grid-template-rows: 86px minmax(0, 1fr) 128px 36px;
+    grid-template-rows: 86px minmax(0, 1fr) 180px 36px;
     grid-template-areas:
       "header header"
       "tools canvas"
@@ -1105,5 +1139,67 @@ textarea:focus-visible,
 
   .canvas-shell {
     margin: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 78px minmax(300px, 1fr) 220px 160px 36px;
+    grid-template-areas:
+      "header"
+      "canvas"
+      "tools"
+      "props"
+      "status";
+  }
+
+  .app-header {
+    align-items: center;
+    padding: 0 14px;
+  }
+
+  .app-header h1 {
+    font-size: 18px;
+  }
+
+  .app-header p {
+    font-size: 11px;
+  }
+
+  .tool-panel {
+    flex-direction: row;
+    gap: 10px;
+    padding: 10px;
+    border-right: 0;
+    border-top: 1px solid #d7e1e7;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .tool-section {
+    min-width: 176px;
+  }
+
+  .property-panel {
+    padding: 12px 14px;
+    border-left: 0;
+    border-top: 1px solid #d7e1e7;
+  }
+
+  .canvas-shell {
+    margin: 8px;
+  }
+
+  .viewport-controls {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .status-bar {
+    gap: 10px;
+    padding: 0 10px;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
