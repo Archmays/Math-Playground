@@ -11,6 +11,17 @@ import {
   type Viewport
 } from "../../core/scene";
 import { panViewport, zoomAtPoint } from "../../canvas/canvasUtils";
+import { createFractionBar } from "../../manipulatives/fractionBars/fractionBars";
+import { createFractionCircle } from "../../manipulatives/fractionCircles/fractionCircles";
+import {
+  createGeometryTile,
+  isGeometryTileObject,
+  type GeometryTileShape
+} from "../../manipulatives/geometryTiles/geometryTiles";
+import {
+  createMeasurementTool,
+  type MeasurementToolKind
+} from "../../manipulatives/measurementTools/measurementTools";
 import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
 import {
   createTenFrame,
@@ -48,6 +59,11 @@ export type WorkspaceAction =
   | { type: "addDemoObject"; objectType: DemoObjectType }
   | { type: "addNumberTile"; value: number }
   | { type: "addTenFrame"; filledCount: number }
+  | { type: "addFractionBar"; numerator: number; denominator: number }
+  | { type: "addFractionCircle"; numerator: number; denominator: number }
+  | { type: "addGeometryTile"; shape: GeometryTileShape }
+  | { type: "addMeasurementTool"; kind: MeasurementToolKind }
+  | { type: "addSelectedGeometryRotationMarker" }
   | { type: "toggleTenFrameCell"; objectId: string; cellIndex: number }
   | { type: "selectObject"; objectId: string }
   | { type: "toggleSelectObject"; objectId: string }
@@ -106,6 +122,16 @@ export function workspaceReducer(
       return addNumberTile(state, action.value);
     case "addTenFrame":
       return addTenFrame(state, action.filledCount);
+    case "addFractionBar":
+      return addFractionBar(state, action.numerator, action.denominator);
+    case "addFractionCircle":
+      return addFractionCircle(state, action.numerator, action.denominator);
+    case "addGeometryTile":
+      return addGeometryTile(state, action.shape);
+    case "addMeasurementTool":
+      return addMeasurementTool(state, action.kind);
+    case "addSelectedGeometryRotationMarker":
+      return addSelectedGeometryRotationMarker(state);
     case "toggleTenFrameCell":
       return toggleTenFrameCell(state, action.objectId, action.cellIndex);
     case "selectObject":
@@ -223,6 +249,128 @@ export function addTenFrame(
     },
     [object.id]
   );
+}
+
+export function addFractionBar(
+  state: WorkspaceState,
+  numerator: number,
+  denominator: number,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createFractionBar({
+    id: options.id,
+    numerator,
+    denominator,
+    x: 96 + (index % 3) * 272,
+    y: 96 + Math.floor(index / 3) * 96
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
+export function addFractionCircle(
+  state: WorkspaceState,
+  numerator: number,
+  denominator: number,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createFractionCircle({
+    id: options.id,
+    numerator,
+    denominator,
+    x: 112 + (index % 4) * 144,
+    y: 112 + Math.floor(index / 4) * 144
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
+export function addGeometryTile(
+  state: WorkspaceState,
+  shape: GeometryTileShape,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createGeometryTile({
+    id: options.id,
+    shape,
+    x: 112 + (index % 4) * 144,
+    y: 112 + Math.floor(index / 4) * 128
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
+export function addMeasurementTool(
+  state: WorkspaceState,
+  kind: MeasurementToolKind,
+  options: { id?: string; now?: string; angle?: number; x?: number; y?: number } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createMeasurementTool({
+    id: options.id,
+    kind,
+    angle: options.angle,
+    x: options.x ?? 112 + (index % 3) * 192,
+    y: options.y ?? 112 + Math.floor(index / 3) * 128
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
+export function addSelectedGeometryRotationMarker(
+  state: WorkspaceState,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const selectedGeometry = state.scene.objects.find(
+    (object) => state.selectedObjectIds.includes(object.id) && isGeometryTileObject(object)
+  );
+
+  if (!selectedGeometry) {
+    return state;
+  }
+
+  return addMeasurementTool(state, "angleMarker", {
+    id: options.id,
+    now: options.now,
+    angle: selectedGeometry.rotation,
+    x: selectedGeometry.x + 24,
+    y: selectedGeometry.y + 24
+  });
 }
 
 export function toggleTenFrameCell(

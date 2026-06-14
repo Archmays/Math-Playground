@@ -5,6 +5,11 @@ import {
   copySelectedObjects,
   deleteSelectedObjects,
   addDemoObject,
+  addFractionBar,
+  addFractionCircle,
+  addGeometryTile,
+  addMeasurementTool,
+  addSelectedGeometryRotationMarker,
   addTenFrame,
   duplicateObject,
   pasteObjects,
@@ -105,6 +110,103 @@ describe("workspace scene selection state", () => {
         tokenPositions: [0, 1, 2, 3, 4, 7]
       }
     });
+  });
+
+  it("adds a fraction bar and selects it", () => {
+    const state = addFractionBar(createEmptyState(), 1, 4, {
+      id: "fraction-1-4",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "fraction-1-4",
+      type: "fraction-bar",
+      label: "1/4",
+      data: {
+        numerator: 1,
+        denominator: 4
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["fraction-1-4"]);
+  });
+
+  it("adds a fraction circle and selects it", () => {
+    const state = addFractionCircle(createEmptyState(), 1, 3, {
+      id: "circle-1-3",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "circle-1-3",
+      type: "fraction-circle",
+      label: "1/3",
+      data: {
+        numerator: 1,
+        denominator: 3
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["circle-1-3"]);
+  });
+
+  it("adds a geometry tile and selects it", () => {
+    const state = addGeometryTile(createEmptyState(), "hexagon", {
+      id: "geometry-hexagon",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "geometry-hexagon",
+      type: "geometry-tile",
+      label: "正六边形",
+      data: {
+        shape: "hexagon",
+        sides: 6
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["geometry-hexagon"]);
+  });
+
+  it("adds a measurement tool and selects it", () => {
+    const state = addMeasurementTool(createEmptyState(), "ruler", {
+      id: "ruler-1",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "ruler-1",
+      type: "measurement-tool",
+      label: "直尺",
+      data: {
+        kind: "ruler",
+        unit: "grid",
+        showTicks: true,
+        showLabel: true
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["ruler-1"]);
+  });
+
+  it("adds an angle marker for the selected geometry tile rotation", () => {
+    const added = addGeometryTile(createEmptyState(), "triangle", {
+      id: "geometry-triangle",
+      now: later
+    });
+    const rotated = updateSelectedObjects(added, { rotation: 45 }, { now: later });
+    const marked = addSelectedGeometryRotationMarker(rotated, {
+      id: "rotation-marker",
+      now: later
+    });
+
+    expect(marked.scene.objects[1]).toMatchObject({
+      id: "rotation-marker",
+      type: "measurement-tool",
+      label: "45°",
+      data: {
+        kind: "angleMarker",
+        angle: 45
+      }
+    });
+    expect(marked.selectedObjectIds).toEqual(["rotation-marker"]);
   });
 
   it("selectObject selects one object", () => {

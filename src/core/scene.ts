@@ -38,6 +38,8 @@ export type ToolType =
 export type ObjectType =
   | "number-tile"
   | "ten-frame"
+  | "fraction-bar"
+  | "fraction-circle"
   | "fraction-strip"
   | "shape"
   | "counter"

@@ -1,6 +1,27 @@
 import type { PointerEvent } from "react";
 import { getBoundingBox } from "../core/geometry";
 import {
+  formatFraction,
+  isFractionBarObject,
+  type FractionBarData
+} from "../manipulatives/fractionBars/fractionBars";
+import {
+  getFractionCircleSectorPath,
+  isFractionCircleObject,
+  type FractionCircleData
+} from "../manipulatives/fractionCircles/fractionCircles";
+import {
+  getGeometryTileLabel,
+  isGeometryTileObject,
+  type GeometryTileData
+} from "../manipulatives/geometryTiles/geometryTiles";
+import {
+  formatDegreeLabel,
+  generateRulerTicks,
+  isMeasurementToolObject,
+  type MeasurementToolData
+} from "../manipulatives/measurementTools/measurementTools";
+import {
   isNumberTileObject,
   type NumberTileData
 } from "../manipulatives/numberTiles/numberTiles";
@@ -99,6 +120,22 @@ function DemoObject({
     );
   }
 
+  if (isFractionBarObject(object)) {
+    return <FractionBarObject object={object} />;
+  }
+
+  if (isFractionCircleObject(object)) {
+    return <FractionCircleObject object={object} />;
+  }
+
+  if (isGeometryTileObject(object)) {
+    return <GeometryTileObject object={object} />;
+  }
+
+  if (isMeasurementToolObject(object)) {
+    return <MeasurementToolObject object={object} />;
+  }
+
   if (object.type === "demo-circle") {
     return (
       <>
@@ -153,6 +190,488 @@ function DemoObject({
         fill={fill}
       />
       <ObjectLabel object={object} box={box} />
+    </>
+  );
+}
+
+function MeasurementToolObject({
+  object
+}: {
+  object: SceneObject<MeasurementToolData>;
+}) {
+  const box = getBoundingBox(object);
+
+  switch (object.data.kind) {
+    case "ruler":
+      return <RulerObject object={object} box={box} />;
+    case "protractor":
+      return <ProtractorObject object={object} box={box} />;
+    case "angleMarker":
+      return <AngleMarkerObject object={object} box={box} />;
+    case "lineSegment":
+      return <LineSegmentObject object={object} box={box} />;
+  }
+}
+
+function RulerObject({
+  object,
+  box
+}: {
+  object: SceneObject<MeasurementToolData>;
+  box: { x: number; y: number; width: number; height: number };
+}) {
+  const ticks = object.data.showTicks
+    ? generateRulerTicks(object.data.length)
+    : [];
+
+  return (
+    <>
+      <rect
+        className="measurement-ruler-body"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={4}
+      />
+      {ticks.map((tick) => {
+        const x = box.x + tick.offset * object.scaleX;
+        const tickHeight = tick.major ? box.height * 0.72 : box.height * 0.44;
+
+        return (
+          <g key={tick.offset}>
+            <line
+              className="measurement-ruler-tick"
+              x1={x}
+              y1={box.y}
+              x2={x}
+              y2={box.y + tickHeight}
+            />
+            {tick.label ? (
+              <text
+                className="measurement-ruler-number"
+                x={x + 3}
+                y={box.y + box.height - 7}
+              >
+                {tick.label}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+      {object.data.showLabel ? (
+        <text
+          className="measurement-tool-label"
+          x={box.x + box.width / 2}
+          y={box.y + box.height + 16}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          {formatLengthLabel(object.data.length, object.data.unit)}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function ProtractorObject({
+  object,
+  box
+}: {
+  object: SceneObject<MeasurementToolData>;
+  box: { x: number; y: number; width: number; height: number };
+}) {
+  const center = { x: box.x + box.width / 2, y: box.y + box.height - 8 };
+  const radius = Math.min(box.width / 2 - 8, box.height - 16);
+  const ticks = Array.from({ length: 19 }, (_value, index) => index * 10);
+
+  return (
+    <>
+      <path
+        className="measurement-protractor-body"
+        d={`M ${center.x - radius} ${center.y} A ${radius} ${radius} 0 0 1 ${center.x + radius} ${center.y} L ${center.x - radius} ${center.y}`}
+      />
+      <line
+        className="measurement-protractor-baseline"
+        x1={center.x - radius}
+        y1={center.y}
+        x2={center.x + radius}
+        y2={center.y}
+      />
+      {object.data.showTicks
+        ? ticks.map((angle) => {
+            const innerRadius = radius - (angle % 30 === 0 ? 16 : 10);
+            const outer = pointOnCircle(center.x, center.y, radius, 180 - angle);
+            const inner = pointOnCircle(
+              center.x,
+              center.y,
+              innerRadius,
+              180 - angle
+            );
+            const labelPoint = pointOnCircle(
+              center.x,
+              center.y,
+              radius - 28,
+              180 - angle
+            );
+
+            return (
+              <g key={angle}>
+                <line
+                  className="measurement-protractor-tick"
+                  x1={outer.x}
+                  y1={outer.y}
+                  x2={inner.x}
+                  y2={inner.y}
+                />
+                {angle % 30 === 0 ? (
+                  <text
+                    className="measurement-protractor-number"
+                    x={labelPoint.x}
+                    y={labelPoint.y}
+                    dominantBaseline="middle"
+                    textAnchor="middle"
+                  >
+                    {angle}
+                  </text>
+                ) : null}
+              </g>
+            );
+          })
+        : null}
+      {object.data.showLabel ? (
+        <text
+          className="measurement-tool-label"
+          x={center.x}
+          y={center.y - radius / 2}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          量角器
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function AngleMarkerObject({
+  object,
+  box
+}: {
+  object: SceneObject<MeasurementToolData>;
+  box: { x: number; y: number; width: number; height: number };
+}) {
+  const center = { x: box.x + 16, y: box.y + box.height - 16 };
+  const radius = Math.min(box.width, box.height) - 32;
+  const angle = Math.min(180, object.data.angle);
+  const end = pointOnCircle(center.x, center.y, radius, -angle);
+  const largeArc = angle > 180 ? 1 : 0;
+  const labelPoint = pointOnCircle(center.x, center.y, radius + 16, -angle / 2);
+
+  return (
+    <>
+      <line
+        className="measurement-angle-ray"
+        x1={center.x}
+        y1={center.y}
+        x2={center.x + radius}
+        y2={center.y}
+      />
+      <line
+        className="measurement-angle-ray"
+        x1={center.x}
+        y1={center.y}
+        x2={end.x}
+        y2={end.y}
+      />
+      <path
+        className="measurement-angle-arc"
+        d={`M ${center.x + radius} ${center.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y}`}
+      />
+      {object.data.showLabel ? (
+        <text
+          className="measurement-tool-label"
+          x={labelPoint.x}
+          y={labelPoint.y}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          {formatDegreeLabel(object.data.angle)}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function LineSegmentObject({
+  object,
+  box
+}: {
+  object: SceneObject<MeasurementToolData>;
+  box: { x: number; y: number; width: number; height: number };
+}) {
+  const y = box.y + box.height / 2;
+
+  return (
+    <>
+      <line
+        className="measurement-line-segment"
+        x1={box.x}
+        y1={y}
+        x2={box.x + box.width}
+        y2={y}
+      />
+      <circle className="measurement-line-endpoint" cx={box.x} cy={y} r={4} />
+      <circle
+        className="measurement-line-endpoint"
+        cx={box.x + box.width}
+        cy={y}
+        r={4}
+      />
+      {object.data.showLabel ? (
+        <text
+          className="measurement-tool-label"
+          x={box.x + box.width / 2}
+          y={box.y + box.height}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          {formatLengthLabel(object.data.length, object.data.unit)}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function GeometryTileObject({
+  object
+}: {
+  object: SceneObject<GeometryTileData>;
+}) {
+  const box = getBoundingBox(object);
+  const palette = getGeometryTilePalette(object.data.colorScheme);
+  const vertices = getGeometryTileVertices(object.data.shape, box);
+  const label = object.label || getGeometryTileLabel(object.data.shape);
+  const fontSize = Math.max(12, Math.min(20, Math.min(box.width, box.height) * 0.26));
+
+  return (
+    <>
+      {object.data.shape === "circle" ? (
+        <ellipse
+          className="geometry-tile-shape"
+          cx={box.x + box.width / 2}
+          cy={box.y + box.height / 2}
+          rx={box.width / 2}
+          ry={box.height / 2}
+          fill={palette.fill}
+          stroke={palette.stroke}
+        />
+      ) : (
+        <polygon
+          className="geometry-tile-shape"
+          points={vertices.map((point) => `${point.x},${point.y}`).join(" ")}
+          fill={palette.fill}
+          stroke={palette.stroke}
+        />
+      )}
+      {object.data.showVertices && object.data.shape !== "circle"
+        ? vertices.map((point, index) => (
+            <circle
+              key={index}
+              className="geometry-tile-vertex"
+              cx={point.x}
+              cy={point.y}
+              r={3.5}
+            />
+          ))
+        : null}
+      {object.data.showLabel ? (
+        <text
+          className="geometry-tile-label"
+          x={box.x + box.width / 2}
+          y={box.y + box.height / 2}
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fontSize={fontSize}
+        >
+          {label}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function FractionCircleObject({
+  object
+}: {
+  object: SceneObject<FractionCircleData>;
+}) {
+  const box = getBoundingBox(object);
+  const radius = Math.min(box.width, box.height) / 2;
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+  const sectorAngle = 360 / Math.max(1, object.data.denominator);
+  const palette = getFractionCirclePalette(object.data.colorScheme);
+  const label = formatFraction(object.data.numerator, object.data.denominator);
+  const fontSize = Math.max(14, Math.min(24, radius * 0.38));
+
+  return (
+    <>
+      <circle
+        className="fraction-circle-background"
+        cx={centerX}
+        cy={centerY}
+        r={radius}
+      />
+      {object.data.denominator === 1 && object.data.numerator === 1 ? (
+        <circle
+          className="fraction-circle-fill"
+          cx={centerX}
+          cy={centerY}
+          r={radius}
+          fill={palette.fill}
+        />
+      ) : (
+        Array.from({ length: object.data.numerator }, (_value, index) => {
+          const startAngle = object.data.startAngle + index * sectorAngle;
+
+          return (
+            <path
+              key={index}
+              className="fraction-circle-fill"
+              d={getFractionCircleSectorPath({
+                centerX,
+                centerY,
+                radius,
+                startAngle,
+                endAngle: startAngle + sectorAngle
+              })}
+              fill={palette.fill}
+            />
+          );
+        })
+      )}
+      {object.data.showSectorLines
+        ? Array.from({ length: object.data.denominator }, (_value, index) => {
+            const angle = object.data.startAngle + index * sectorAngle;
+            const end = pointOnCircle(centerX, centerY, radius, angle);
+
+            return (
+              <line
+                key={index}
+                className="fraction-circle-sector-line"
+                x1={centerX}
+                y1={centerY}
+                x2={end.x}
+                y2={end.y}
+              />
+            );
+          })
+        : null}
+      <circle
+        className="fraction-circle-outline"
+        cx={centerX}
+        cy={centerY}
+        r={radius}
+      />
+      {object.data.showLabels ? (
+        <text
+          className="fraction-circle-label"
+          x={centerX}
+          y={centerY}
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fontSize={fontSize}
+        >
+          {label}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function FractionBarObject({
+  object
+}: {
+  object: SceneObject<FractionBarData>;
+}) {
+  const box = getBoundingBox(object);
+  const denominator = Math.max(1, object.data.denominator);
+  const segmentWidth = box.width / denominator;
+  const palette = getFractionBarPalette(object.data.colorScheme);
+  const label = formatFraction(object.data.numerator, object.data.denominator);
+  const fontSize = Math.max(14, Math.min(22, box.height * 0.46));
+
+  return (
+    <>
+      <defs>
+        <clipPath id={`${object.id}-fraction-clip`}>
+          <rect
+            x={box.x}
+            y={box.y}
+            width={box.width}
+            height={box.height}
+            rx={8}
+          />
+        </clipPath>
+      </defs>
+      <rect
+        className="fraction-bar-background"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={8}
+      />
+      <g clipPath={`url(#${object.id}-fraction-clip)`}>
+        {Array.from({ length: object.data.numerator }, (_value, index) => (
+          <rect
+            key={index}
+            className="fraction-bar-fill"
+            x={box.x + index * segmentWidth}
+            y={box.y}
+            width={segmentWidth}
+            height={box.height}
+            fill={palette.fill}
+          />
+        ))}
+      </g>
+      {object.data.showTicks
+        ? Array.from({ length: denominator - 1 }, (_value, index) => {
+            const tickX = box.x + (index + 1) * segmentWidth;
+
+            return (
+              <line
+                key={index}
+                className="fraction-bar-tick"
+                x1={tickX}
+                y1={box.y}
+                x2={tickX}
+                y2={box.y + box.height}
+              />
+            );
+          })
+        : null}
+      <rect
+        className="fraction-bar-outline"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={8}
+      />
+      {object.data.showLabels ? (
+        <text
+          className="fraction-bar-label"
+          x={box.x + box.width / 2}
+          y={box.y + box.height / 2}
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fontSize={fontSize}
+        >
+          {label}
+        </text>
+      ) : null}
     </>
   );
 }
@@ -312,6 +831,121 @@ function getNumberTilePalette(value: number, colorScheme: string) {
   }
 
   return { fill: "#fff1bf", stroke: "#b78322" };
+}
+
+function getFractionBarPalette(colorScheme: string) {
+  if (colorScheme === "warm") {
+    return { fill: "#f6c177" };
+  }
+
+  if (colorScheme === "cool") {
+    return { fill: "#7db9d6" };
+  }
+
+  return { fill: "#8fcfae" };
+}
+
+function getFractionCirclePalette(colorScheme: string) {
+  if (colorScheme === "warm") {
+    return { fill: "#f5b971" };
+  }
+
+  if (colorScheme === "cool") {
+    return { fill: "#83c5d9" };
+  }
+
+  return { fill: "#9ad6b2" };
+}
+
+function getGeometryTilePalette(colorScheme: string) {
+  if (colorScheme === "warm") {
+    return { fill: "#ffe2b8", stroke: "#b46a16" };
+  }
+
+  if (colorScheme === "cool") {
+    return { fill: "#d9f0fb", stroke: "#28758f" };
+  }
+
+  return { fill: "#e9f7df", stroke: "#5d8f35" };
+}
+
+function getGeometryTileVertices(
+  shape: GeometryTileData["shape"],
+  box: { x: number; y: number; width: number; height: number }
+) {
+  const left = box.x;
+  const top = box.y;
+  const right = box.x + box.width;
+  const bottom = box.y + box.height;
+  const centerX = box.x + box.width / 2;
+  const centerY = box.y + box.height / 2;
+
+  switch (shape) {
+    case "triangle":
+      return [
+        { x: centerX, y: top },
+        { x: right, y: bottom },
+        { x: left, y: bottom }
+      ];
+    case "hexagon":
+      return Array.from({ length: 6 }, (_value, index) => {
+        const angle = (Math.PI / 180) * (60 * index);
+
+        return {
+          x: centerX + (box.width / 2) * Math.cos(angle),
+          y: centerY + (box.height / 2) * Math.sin(angle)
+        };
+      });
+    case "trapezoid":
+      return [
+        { x: left + box.width * 0.25, y: top },
+        { x: right - box.width * 0.25, y: top },
+        { x: right, y: bottom },
+        { x: left, y: bottom }
+      ];
+    case "parallelogram":
+      return [
+        { x: left + box.width * 0.24, y: top },
+        { x: right, y: top },
+        { x: right - box.width * 0.24, y: bottom },
+        { x: left, y: bottom }
+      ];
+    case "circle":
+    case "rectangle":
+    case "square":
+      return [
+        { x: left, y: top },
+        { x: right, y: top },
+        { x: right, y: bottom },
+        { x: left, y: bottom }
+      ];
+  }
+}
+
+function formatLengthLabel(length: number, unit: string): string {
+  if (unit === "cm") {
+    return `${length} cm`;
+  }
+
+  if (unit === "custom") {
+    return `${length}`;
+  }
+
+  return `${length} grid`;
+}
+
+function pointOnCircle(
+  centerX: number,
+  centerY: number,
+  radius: number,
+  angle: number
+) {
+  const radians = (angle * Math.PI) / 180;
+
+  return {
+    x: centerX + radius * Math.cos(radians),
+    y: centerY + radius * Math.sin(radians)
+  };
 }
 
 function ObjectLabel({

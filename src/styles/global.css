@@ -210,7 +210,14 @@ button {
 .scene-object-selected .scene-object-shape,
 .scene-object-selected .scene-object-text-hit-area,
 .scene-object-selected .number-tile-shape,
-.scene-object-selected .ten-frame-background {
+.scene-object-selected .ten-frame-background,
+.scene-object-selected .fraction-bar-outline,
+.scene-object-selected .fraction-circle-outline,
+.scene-object-selected .geometry-tile-shape,
+.scene-object-selected .measurement-ruler-body,
+.scene-object-selected .measurement-protractor-body,
+.scene-object-selected .measurement-angle-arc,
+.scene-object-selected .measurement-line-segment {
   stroke: #2f7f95;
 }
 
@@ -283,6 +290,147 @@ button {
   stroke-width: 1.5;
   pointer-events: none;
   vector-effect: non-scaling-stroke;
+}
+
+.fraction-bar-background {
+  fill: #ffffff;
+  stroke: none;
+}
+
+.fraction-bar-fill {
+  pointer-events: none;
+}
+
+.fraction-bar-outline {
+  fill: none;
+  stroke: #6f8794;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.fraction-bar-tick {
+  stroke: #6f8794;
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.fraction-bar-label {
+  fill: #1f2a37;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+.fraction-circle-background {
+  fill: #ffffff;
+  stroke: none;
+}
+
+.fraction-circle-fill {
+  pointer-events: none;
+}
+
+.fraction-circle-outline {
+  fill: none;
+  stroke: #6f8794;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.fraction-circle-sector-line {
+  stroke: #6f8794;
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.fraction-circle-label {
+  fill: #1f2a37;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+.geometry-tile-shape {
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-tile-vertex {
+  fill: #ffffff;
+  stroke: #243447;
+  stroke-width: 1.5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.geometry-tile-label {
+  fill: #1f2a37;
+  font-weight: 850;
+  pointer-events: none;
+}
+
+.measurement-ruler-body {
+  fill: rgb(255 248 210 / 82%);
+  stroke: #8b7650;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-ruler-tick,
+.measurement-protractor-tick,
+.measurement-protractor-baseline {
+  stroke: #5f6670;
+  stroke-width: 1.3;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-ruler-number,
+.measurement-protractor-number {
+  fill: #394452;
+  font-size: 10px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+.measurement-protractor-body {
+  fill: rgb(213 241 255 / 72%);
+  stroke: #55798b;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-angle-ray {
+  stroke: #4f6473;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-angle-arc {
+  fill: none;
+  stroke: #d6782f;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-line-segment {
+  stroke: #4f6473;
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-line-endpoint {
+  fill: #ffffff;
+  stroke: #4f6473;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.measurement-tool-label {
+  fill: #263544;
+  font-size: 13px;
+  font-weight: 850;
+  pointer-events: none;
 }
 
 .selection-box {
@@ -369,12 +517,67 @@ button {
   font-weight: 700;
 }
 
+.fraction-selection-summary {
+  margin: 8px 0 14px;
+  padding: 8px 10px;
+  border: 1px solid #d5dfec;
+  border-radius: 6px;
+  color: #243447;
+  background: #f7fbff;
+  font-weight: 700;
+}
+
+.property-panel .fraction-selection-summary p {
+  margin: 0;
+  color: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.property-panel .fraction-selection-summary p + p {
+  margin-top: 4px;
+}
+
+.geometry-measurements {
+  padding: 8px 10px;
+  border: 1px solid #d6e3d0;
+  border-radius: 6px;
+  background: #f8fcf5;
+}
+
+.property-panel .geometry-measurements p {
+  margin: 0;
+  color: #2f4721;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.property-panel .geometry-measurements p + p {
+  margin-top: 4px;
+}
+
 .property-check {
   display: flex;
   align-items: center;
   gap: 8px;
   color: #243447;
   font-size: 14px;
+}
+
+.property-action-button {
+  min-height: 34px;
+  border: 1px solid #c9d6dd;
+  border-radius: 6px;
+  color: #243447;
+  background: #f8fafb;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.property-action-button:hover {
+  border-color: #79a8b7;
+  background: #eef8fb;
 }
 
 .viewport-controls {

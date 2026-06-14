@@ -11,6 +11,7 @@ import {
 import { ViewportControls } from "./ViewportControls";
 import { ZOOM_STEP, getSvgPointFromEvent, screenToWorld } from "./canvasUtils";
 import type { CanvasSize, Point } from "./canvasTypes";
+import { snapRotationAngle } from "../manipulatives/geometryTiles/geometryTiles";
 
 const defaultCanvasSize: CanvasSize = {
   width: 960,
@@ -356,7 +357,7 @@ export function MathCanvas() {
             } else {
               transformObjects(
                 dragState.objectIds,
-                rotateObjectsFromDrag(dragState, worldPointer)
+                rotateObjectsFromDrag(dragState, worldPointer, event.altKey)
               );
             }
           }
@@ -447,7 +448,8 @@ function resizeObjectsFromDrag(
 
 function rotateObjectsFromDrag(
   dragState: Extract<DragState, { mode: "rotate" }>,
-  pointer: Point
+  pointer: Point,
+  disableSnap: boolean
 ): Record<string, SceneObject> {
   const center = {
     x: dragState.startBox.x + dragState.startBox.width / 2,
@@ -460,7 +462,13 @@ function rotateObjectsFromDrag(
   return Object.fromEntries(
     dragState.objectIds.map((id) => {
       const object = dragState.startObjects[id];
-      return [id, { ...object, rotation: object.rotation + delta }];
+      return [
+        id,
+        {
+          ...object,
+          rotation: snapRotationAngle(object.rotation + delta, disableSnap)
+        }
+      ];
     })
   );
 }

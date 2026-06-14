@@ -1,8 +1,37 @@
 import { getBoundingBox, rotatePoint } from "../../core/geometry";
 import type { BoundingBox, Scene, SceneObject } from "../../core/scene";
-import { serializeScene } from "../../core/sceneSerialization";
+import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 
 export const LOCAL_SCENE_STORAGE_KEY = "math-playground:auto-save:scene";
+
+export type AutoSavedSceneParseResult =
+  | { status: "empty" }
+  | { status: "ready"; scene: Scene }
+  | { status: "error"; error: string };
+
+export function parseAutoSavedScene(
+  savedSceneText: string | null
+): AutoSavedSceneParseResult {
+  if (!savedSceneText) {
+    return {
+      status: "empty"
+    };
+  }
+
+  const result = deserializeScene(savedSceneText);
+
+  if (!result.ok) {
+    return {
+      status: "error",
+      error: result.error
+    };
+  }
+
+  return {
+    status: "ready",
+    scene: result.scene
+  };
+}
 
 export function saveSceneJson(scene: Scene, date = new Date()): void {
   downloadTextFile(

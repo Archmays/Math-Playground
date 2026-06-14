@@ -14,6 +14,8 @@ import {
   type EditableObjectPatch
 } from "./sceneState";
 import type { SceneObject } from "../../core/scene";
+import type { GeometryTileShape } from "../../manipulatives/geometryTiles/geometryTiles";
+import type { MeasurementToolKind } from "../../manipulatives/measurementTools/measurementTools";
 
 interface SceneContextValue {
   scene: Scene;
@@ -21,6 +23,11 @@ interface SceneContextValue {
   addDemoObject: (objectType: DemoObjectType) => void;
   addNumberTile: (value: number) => void;
   addTenFrame: (filledCount: number) => void;
+  addFractionBar: (numerator: number, denominator: number) => void;
+  addFractionCircle: (numerator: number, denominator: number) => void;
+  addGeometryTile: (shape: GeometryTileShape) => void;
+  addMeasurementTool: (kind: MeasurementToolKind) => void;
+  addSelectedGeometryRotationMarker: () => void;
   selectObject: (objectId: string) => void;
   toggleSelectObject: (objectId: string) => void;
   clearSelection: () => void;
@@ -64,6 +71,32 @@ export function SceneProvider({ children }: { children: ReactNode }) {
 
   const addTenFrame = useCallback((filledCount: number) => {
     dispatch({ type: "addTenFrame", filledCount });
+  }, []);
+
+  const addFractionBar = useCallback(
+    (numerator: number, denominator: number) => {
+      dispatch({ type: "addFractionBar", numerator, denominator });
+    },
+    []
+  );
+
+  const addFractionCircle = useCallback(
+    (numerator: number, denominator: number) => {
+      dispatch({ type: "addFractionCircle", numerator, denominator });
+    },
+    []
+  );
+
+  const addGeometryTile = useCallback((shape: GeometryTileShape) => {
+    dispatch({ type: "addGeometryTile", shape });
+  }, []);
+
+  const addMeasurementTool = useCallback((kind: MeasurementToolKind) => {
+    dispatch({ type: "addMeasurementTool", kind });
+  }, []);
+
+  const addSelectedGeometryRotationMarker = useCallback(() => {
+    dispatch({ type: "addSelectedGeometryRotationMarker" });
   }, []);
 
   const selectObject = useCallback((objectId: string) => {
@@ -158,6 +191,11 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addDemoObject,
       addNumberTile,
       addTenFrame,
+      addFractionBar,
+      addFractionCircle,
+      addGeometryTile,
+      addMeasurementTool,
+      addSelectedGeometryRotationMarker,
       selectObject,
       toggleSelectObject,
       clearSelection,
@@ -180,6 +218,11 @@ export function SceneProvider({ children }: { children: ReactNode }) {
     }),
     [
       addDemoObject,
+      addFractionBar,
+      addFractionCircle,
+      addGeometryTile,
+      addMeasurementTool,
+      addSelectedGeometryRotationMarker,
       addNumberTile,
       addTenFrame,
       clearSelection,

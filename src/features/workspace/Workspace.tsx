@@ -4,6 +4,39 @@ import { AppHeader } from "../../components/AppHeader";
 import type { SceneObject } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 import {
+  getSelectedFractionSummary,
+  isFractionBarObject,
+  MAX_DENOMINATOR,
+  MIN_DENOMINATOR,
+  updateFractionBarData,
+  updateFractionBarDenominator,
+  updateFractionBarNumerator
+} from "../../manipulatives/fractionBars/fractionBars";
+import {
+  getSelectedFractionValueSummary,
+  isFractionCircleObject,
+  updateFractionCircleData,
+  updateFractionCircleDenominator,
+  updateFractionCircleNumerator
+} from "../../manipulatives/fractionCircles/fractionCircles";
+import {
+  getGeometryTileLabel,
+  getGeometryTileMeasurements,
+  isGeometryTileObject,
+  isGeometryTileShape,
+  updateGeometryTileData,
+  type GeometryTileShape
+} from "../../manipulatives/geometryTiles/geometryTiles";
+import {
+  getMeasurementToolLabel,
+  isMeasurementToolKind,
+  isMeasurementToolObject,
+  isMeasurementUnit,
+  updateMeasurementToolData,
+  type MeasurementToolKind,
+  type MeasurementUnit
+} from "../../manipulatives/measurementTools/measurementTools";
+import {
   getNumberTileDataForSize,
   isNumberTileObject,
   isNumberTileSize,
@@ -26,6 +59,7 @@ import {
   LOCAL_SCENE_STORAGE_KEY,
   exportScenePng,
   exportSceneSvg,
+  parseAutoSavedScene,
   saveSceneJson
 } from "./sceneFileUtils";
 
@@ -39,6 +73,11 @@ export function Workspace() {
     addDemoObject,
     addNumberTile,
     addTenFrame,
+    addFractionBar,
+    addFractionCircle,
+    addGeometryTile,
+    addMeasurementTool,
+    addSelectedGeometryRotationMarker,
     updateSelectedObjects,
     loadScene
   } = useScene();
@@ -57,31 +96,38 @@ export function Workspace() {
     scene.objects,
     selectedObjectIds
   );
+  const selectedFractionSummary = getSelectedFractionSummary(
+    scene.objects,
+    selectedObjectIds
+  );
+  const selectedFractionValueSummary = getSelectedFractionValueSummary(
+    scene.objects,
+    selectedObjectIds
+  );
+  const hasSelectedFractionCircle = selectedObjects.some(isFractionCircleObject);
 
   useEffect(() => {
     latestSceneRef.current = scene;
   }, [scene]);
 
   useEffect(() => {
-    const savedScene = window.localStorage.getItem(LOCAL_SCENE_STORAGE_KEY);
+    const autoSavedScene = parseAutoSavedScene(
+      window.localStorage.getItem(LOCAL_SCENE_STORAGE_KEY)
+    );
 
-    if (!savedScene) {
+    if (autoSavedScene.status === "empty") {
       setAutoSaveReady(true);
       return;
     }
 
-    const result = deserializeScene(savedScene);
-
-    if (!result.ok) {
-      setFileMessage(result.error);
+    if (autoSavedScene.status === "error") {
+      setFileMessage(autoSavedScene.error);
       setAutoSaveReady(true);
       return;
     }
 
-    if (window.confirm("检测到上次自动保存的画布，是否恢复？")) {
-      loadScene(result.scene);
-      setFileMessage("已恢复上次自动保存。");
-    }
+    loadScene(autoSavedScene.scene);
+    setFileMessage("已恢复上次自动保存。");
 
     setAutoSaveReady(true);
   }, [loadScene]);
@@ -133,6 +179,44 @@ export function Workspace() {
     }
 
     addNumberTile(value);
+  };
+
+  const addCustomFractionBar = () => {
+    const input = window.prompt("请输入分数，例如 3/4", "3/4");
+
+    if (input === null) {
+      return;
+    }
+
+    const [rawNumerator, rawDenominator] = input.split("/");
+    const numerator = Number(rawNumerator?.trim());
+    const denominator = Number(rawDenominator?.trim());
+
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator)) {
+      setFileMessage("请输入有效分数。");
+      return;
+    }
+
+    addFractionBar(numerator, denominator);
+  };
+
+  const addCustomFractionCircle = () => {
+    const input = window.prompt("请输入分数圆，例如 3/4", "3/4");
+
+    if (input === null) {
+      return;
+    }
+
+    const [rawNumerator, rawDenominator] = input.split("/");
+    const numerator = Number(rawNumerator?.trim());
+    const denominator = Number(rawDenominator?.trim());
+
+    if (!Number.isFinite(numerator) || !Number.isFinite(denominator)) {
+      setFileMessage("请输入有效分数圆。");
+      return;
+    }
+
+    addFractionCircle(numerator, denominator);
   };
 
   return (
@@ -188,6 +272,171 @@ export function Workspace() {
           onClick={() => addTenFrame(10)}
         >
           10 点十格阵
+        </button>
+        <div className="tool-divider" />
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionBar(1, 2)}
+        >
+          1/2
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionBar(1, 3)}
+        >
+          1/3
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionBar(1, 4)}
+        >
+          1/4
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionBar(1, 5)}
+        >
+          1/5
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionBar(1, 8)}
+        >
+          1/8
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={addCustomFractionBar}
+        >
+          自定义分数
+        </button>
+        <div className="tool-divider" />
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionCircle(1, 2)}
+        >
+          圆 1/2
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionCircle(1, 3)}
+        >
+          圆 1/3
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionCircle(1, 4)}
+        >
+          圆 1/4
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionCircle(1, 6)}
+        >
+          圆 1/6
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addFractionCircle(1, 8)}
+        >
+          圆 1/8
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={addCustomFractionCircle}
+        >
+          自定义分数圆
+        </button>
+        <div className="tool-divider" />
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("triangle")}
+        >
+          等边三角形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("square")}
+        >
+          正方形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("rectangle")}
+        >
+          长方形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("hexagon")}
+        >
+          正六边形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("circle")}
+        >
+          圆形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("trapezoid")}
+        >
+          梯形
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addGeometryTile("parallelogram")}
+        >
+          平行四边形
+        </button>
+        <div className="tool-divider" />
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addMeasurementTool("ruler")}
+        >
+          直尺
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addMeasurementTool("protractor")}
+        >
+          量角器
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addMeasurementTool("angleMarker")}
+        >
+          角度弧
+        </button>
+        <button
+          type="button"
+          className="tool-button"
+          onClick={() => addMeasurementTool("lineSegment")}
+        >
+          线段
         </button>
         <div className="tool-divider" />
         <button
@@ -271,10 +520,38 @@ export function Workspace() {
             选中总数：{selectedMathValue}
           </p>
         ) : null}
+        {selectedFractionSummary.fractions.length > 1 ? (
+          <div className="fraction-selection-summary">
+            {selectedFractionSummary.fractions.map((fraction) => (
+              <p key={fraction.id}>
+                {fraction.label} = {formatDecimal(fraction.decimalValue)}
+              </p>
+            ))}
+            <p>
+              {selectedFractionSummary.canAdd
+                ? `同分母总和：${selectedFractionSummary.sumLabel}`
+                : selectedFractionSummary.message}
+            </p>
+          </div>
+        ) : null}
+        {hasSelectedFractionCircle &&
+        selectedFractionValueSummary.fractions.length > 1 ? (
+          <div className="fraction-selection-summary">
+            {selectedFractionValueSummary.fractions.map((fraction) => (
+              <p key={fraction.id}>
+                {fraction.label} = {formatDecimal(fraction.decimalValue)}
+              </p>
+            ))}
+            {selectedFractionValueSummary.message ? (
+              <p>{selectedFractionValueSummary.message}</p>
+            ) : null}
+          </div>
+        ) : null}
         {fileMessage ? <p className="file-message">{fileMessage}</p> : null}
         {selectedObject ? (
           <ObjectInspector
             object={selectedObject}
+            onAddRotationMarker={addSelectedGeometryRotationMarker}
             onChange={updateSelectedObjects}
           />
         ) : (
@@ -293,9 +570,11 @@ export function Workspace() {
 
 function ObjectInspector({
   object,
+  onAddRotationMarker,
   onChange
 }: {
   object: SceneObject;
+  onAddRotationMarker: () => void;
   onChange: (patch: EditableObjectPatch) => void;
 }) {
   return (
@@ -339,6 +618,22 @@ function ObjectInspector({
       ) : null}
       {isTenFrameObject(object) ? (
         <TenFrameInspectorFields object={object} onChange={onChange} />
+      ) : null}
+      {isFractionBarObject(object) ? (
+        <FractionBarInspectorFields object={object} onChange={onChange} />
+      ) : null}
+      {isFractionCircleObject(object) ? (
+        <FractionCircleInspectorFields object={object} onChange={onChange} />
+      ) : null}
+      {isGeometryTileObject(object) ? (
+        <GeometryTileInspectorFields
+          object={object}
+          onAddRotationMarker={onAddRotationMarker}
+          onChange={onChange}
+        />
+      ) : null}
+      {isMeasurementToolObject(object) ? (
+        <MeasurementToolInspectorFields object={object} onChange={onChange} />
       ) : null}
       <label className="property-check">
         <input
@@ -478,6 +773,384 @@ function TenFrameInspectorFields({
   );
 }
 
+function FractionBarInspectorFields({
+  object,
+  onChange
+}: {
+  object: SceneObject;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isFractionBarObject(object)) {
+    return null;
+  }
+
+  return (
+    <>
+      <label className="property-field">
+        <span>numerator</span>
+        <input
+          type="number"
+          min={0}
+          max={object.data.denominator}
+          step={1}
+          value={object.data.numerator}
+          onChange={(event) => {
+            if (!Number.isFinite(event.target.valueAsNumber)) {
+              return;
+            }
+
+            const updated = updateFractionBarNumerator(
+              object,
+              event.target.valueAsNumber
+            );
+            onChange({ label: updated.label, data: updated.data });
+          }}
+        />
+      </label>
+      <label className="property-field">
+        <span>denominator</span>
+        <input
+          type="number"
+          min={MIN_DENOMINATOR}
+          max={MAX_DENOMINATOR}
+          step={1}
+          value={object.data.denominator}
+          onChange={(event) => {
+            if (!Number.isFinite(event.target.valueAsNumber)) {
+              return;
+            }
+
+            const updated = updateFractionBarDenominator(
+              object,
+              event.target.valueAsNumber
+            );
+            onChange({ label: updated.label, data: updated.data });
+          }}
+        />
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showLabels}
+          onChange={(event) => {
+            const updated = updateFractionBarData(object, {
+              showLabels: event.target.checked
+            });
+            onChange({ data: updated.data });
+          }}
+        />
+        显示分数标签
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showTicks}
+          onChange={(event) => {
+            const updated = updateFractionBarData(object, {
+              showTicks: event.target.checked
+            });
+            onChange({ data: updated.data });
+          }}
+        />
+        显示分割线
+      </label>
+    </>
+  );
+}
+
+function FractionCircleInspectorFields({
+  object,
+  onChange
+}: {
+  object: SceneObject;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isFractionCircleObject(object)) {
+    return null;
+  }
+
+  return (
+    <>
+      <label className="property-field">
+        <span>numerator</span>
+        <input
+          type="number"
+          min={0}
+          max={object.data.denominator}
+          step={1}
+          value={object.data.numerator}
+          onChange={(event) => {
+            if (!Number.isFinite(event.target.valueAsNumber)) {
+              return;
+            }
+
+            const updated = updateFractionCircleNumerator(
+              object,
+              event.target.valueAsNumber
+            );
+            onChange({ label: updated.label, data: updated.data });
+          }}
+        />
+      </label>
+      <label className="property-field">
+        <span>denominator</span>
+        <input
+          type="number"
+          min={MIN_DENOMINATOR}
+          max={MAX_DENOMINATOR}
+          step={1}
+          value={object.data.denominator}
+          onChange={(event) => {
+            if (!Number.isFinite(event.target.valueAsNumber)) {
+              return;
+            }
+
+            const updated = updateFractionCircleDenominator(
+              object,
+              event.target.valueAsNumber
+            );
+            onChange({ label: updated.label, data: updated.data });
+          }}
+        />
+      </label>
+      <label className="property-field">
+        <span>startAngle</span>
+        <input
+          type="number"
+          step={1}
+          value={object.data.startAngle}
+          onChange={(event) => {
+            if (!Number.isFinite(event.target.valueAsNumber)) {
+              return;
+            }
+
+            const updated = updateFractionCircleData(object, {
+              startAngle: event.target.valueAsNumber
+            });
+            onChange({ data: updated.data });
+          }}
+        />
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showLabels}
+          onChange={(event) => {
+            const updated = updateFractionCircleData(object, {
+              showLabels: event.target.checked
+            });
+            onChange({ data: updated.data });
+          }}
+        />
+        显示分数标签
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showSectorLines}
+          onChange={(event) => {
+            const updated = updateFractionCircleData(object, {
+              showSectorLines: event.target.checked
+            });
+            onChange({ data: updated.data });
+          }}
+        />
+        显示扇区线
+      </label>
+    </>
+  );
+}
+
+function GeometryTileInspectorFields({
+  object,
+  onAddRotationMarker,
+  onChange
+}: {
+  object: SceneObject;
+  onAddRotationMarker: () => void;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isGeometryTileObject(object)) {
+    return null;
+  }
+
+  const measurements = getGeometryTileMeasurements(
+    object.data,
+    object.scaleX,
+    object.scaleY
+  );
+
+  const updateData = (data: Parameters<typeof updateGeometryTileData>[1]) => {
+    const updated = updateGeometryTileData(object, data);
+    onChange({ label: updated.label, data: updated.data });
+  };
+
+  return (
+    <>
+      <label className="property-field">
+        <span>shape</span>
+        <select
+          value={object.data.shape}
+          onChange={(event) => {
+            const shape = event.target.value;
+
+            if (isGeometryTileShape(shape)) {
+              updateData({ shape: shape as GeometryTileShape });
+            }
+          }}
+        >
+          {GEOMETRY_TILE_SHAPES.map((shape) => (
+            <option key={shape} value={shape}>
+              {getGeometryTileLabel(shape)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <NumberPropertyField
+        label="width"
+        value={object.data.width}
+        min={24}
+        onChange={(value) => updateData({ width: value })}
+      />
+      <NumberPropertyField
+        label="height"
+        value={object.data.height}
+        min={24}
+        onChange={(value) => updateData({ height: value })}
+      />
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showLabel}
+          onChange={(event) => updateData({ showLabel: event.target.checked })}
+        />
+        显示图形标签
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showVertices}
+          onChange={(event) =>
+            updateData({ showVertices: event.target.checked })
+          }
+        />
+        显示顶点
+      </label>
+      <div className="geometry-measurements">
+        <p>旋转：{formatMeasurement(object.rotation)}°</p>
+        {measurements.area !== undefined ? (
+          <p>估算面积：{formatMeasurement(measurements.area)}</p>
+        ) : null}
+        {measurements.perimeter !== undefined ? (
+          <p>估算周长：{formatMeasurement(measurements.perimeter)}</p>
+        ) : null}
+        {measurements.radius !== undefined ? (
+          <p>半径：{formatMeasurement(measurements.radius)}</p>
+        ) : null}
+        {measurements.diameter !== undefined ? (
+          <p>直径：{formatMeasurement(measurements.diameter)}</p>
+        ) : null}
+        {measurements.unsupportedMessage ? (
+          <p>{measurements.unsupportedMessage}</p>
+        ) : null}
+      </div>
+      <button
+        type="button"
+        className="property-action-button"
+        onClick={onAddRotationMarker}
+      >
+        添加当前旋转角度标注
+      </button>
+    </>
+  );
+}
+
+function MeasurementToolInspectorFields({
+  object,
+  onChange
+}: {
+  object: SceneObject;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isMeasurementToolObject(object)) {
+    return null;
+  }
+
+  const updateData = (data: Parameters<typeof updateMeasurementToolData>[1]) => {
+    const updated = updateMeasurementToolData(object, data);
+    onChange({ label: updated.label, data: updated.data });
+  };
+
+  return (
+    <>
+      <label className="property-field">
+        <span>kind</span>
+        <select
+          value={object.data.kind}
+          onChange={(event) => {
+            const kind = event.target.value;
+
+            if (isMeasurementToolKind(kind)) {
+              updateData({ kind: kind as MeasurementToolKind });
+            }
+          }}
+        >
+          {MEASUREMENT_TOOL_KINDS.map((kind) => (
+            <option key={kind} value={kind}>
+              {getMeasurementToolLabel(kind)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <NumberPropertyField
+        label="length"
+        value={object.data.length}
+        min={16}
+        onChange={(value) => updateData({ length: value })}
+      />
+      <NumberPropertyField
+        label="angle"
+        value={object.data.angle}
+        min={0}
+        onChange={(value) => updateData({ angle: value })}
+      />
+      <label className="property-field">
+        <span>unit</span>
+        <select
+          value={object.data.unit}
+          onChange={(event) => {
+            const unit = event.target.value;
+
+            if (isMeasurementUnit(unit)) {
+              updateData({ unit: unit as MeasurementUnit });
+            }
+          }}
+        >
+          <option value="grid">grid</option>
+          <option value="cm">cm</option>
+          <option value="custom">custom</option>
+        </select>
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showTicks}
+          onChange={(event) => updateData({ showTicks: event.target.checked })}
+        />
+        显示刻度
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showLabel}
+          onChange={(event) => updateData({ showLabel: event.target.checked })}
+        />
+        显示标签
+      </label>
+    </>
+  );
+}
+
 function NumberTileInspectorFields({
   object,
   onChange
@@ -552,3 +1225,28 @@ function NumberTileInspectorFields({
 function formatNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(2);
 }
+
+function formatDecimal(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(2);
+}
+
+function formatMeasurement(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+const GEOMETRY_TILE_SHAPES: GeometryTileShape[] = [
+  "triangle",
+  "square",
+  "rectangle",
+  "hexagon",
+  "circle",
+  "trapezoid",
+  "parallelogram"
+];
+
+const MEASUREMENT_TOOL_KINDS: MeasurementToolKind[] = [
+  "ruler",
+  "protractor",
+  "angleMarker",
+  "lineSegment"
+];
