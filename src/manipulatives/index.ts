@@ -5,10 +5,14 @@ export type BuiltInManipulativeKind =
   | "fraction-circle"
   | "geometry-tile"
   | "measurement-tool"
+  | "balance-scale"
+  | "algebra-tile"
   | "fraction-strip"
   | "shape"
   | "counter";
 
+export * from "./algebraTiles/algebraTiles";
+export * from "./balanceScale/balanceScale";
 export * from "./fractionBars/fractionBars";
 export * from "./fractionCircles/fractionCircles";
 export * from "./geometryTiles/geometryTiles";

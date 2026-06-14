@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createObject, createScene } from "../../core/scene";
+import { createBalanceScale } from "../../manipulatives/balanceScale/balanceScale";
+import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
 import {
+  addAlgebraTile,
+  addBalanceScale,
   clearSelection,
   copySelectedObjects,
   deleteSelectedObjects,
@@ -17,6 +21,7 @@ import {
   moveObject,
   moveObjectsFromStart,
   selectObject,
+  setSelectedBalanceScaleSideFromNumberTiles,
   toggleSelectObject,
   toggleTenFrameCell,
   undo,
@@ -184,6 +189,78 @@ describe("workspace scene selection state", () => {
       }
     });
     expect(state.selectedObjectIds).toEqual(["ruler-1"]);
+  });
+
+  it("adds a balance scale and selects it", () => {
+    const state = addBalanceScale(createEmptyState(), 3, 7, {
+      id: "balance-3-7",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "balance-3-7",
+      type: "balance-scale",
+      label: "天平",
+      data: {
+        leftValue: 3,
+        rightValue: 7
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["balance-3-7"]);
+  });
+
+  it("adds an algebra tile and selects it", () => {
+    const state = addAlgebraTile(createEmptyState(), "x2", "negative", {
+      id: "algebra-x2",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "algebra-x2",
+      type: "algebra-tile",
+      label: "-x²",
+      data: {
+        tileKind: "x2",
+        sign: "negative",
+        showLabel: true
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["algebra-x2"]);
+  });
+
+  it("sets selected balance side from selected number tiles", () => {
+    const balance = createBalanceScale({
+      id: "balance-1",
+      leftValue: 0,
+      rightValue: 0
+    });
+    const three = createNumberTile({ id: "number-3", value: 3 });
+    const four = createNumberTile({ id: "number-4", value: 4 });
+    const state: WorkspaceState = {
+      ...createEmptyState(),
+      scene: createScene({
+        id: "scene-balance",
+        title: "balance",
+        now,
+        grid: { size: 16 },
+        objects: [balance, three, four]
+      }),
+      selectedObjectIds: ["balance-1", "number-3", "number-4"]
+    };
+
+    const leftSet = setSelectedBalanceScaleSideFromNumberTiles(state, "left", {
+      now: later
+    });
+    const rightSet = setSelectedBalanceScaleSideFromNumberTiles(leftSet, "right", {
+      now: later
+    });
+
+    expect(leftSet.scene.objects[0]).toMatchObject({
+      data: { leftValue: 7, rightValue: 0 }
+    });
+    expect(rightSet.scene.objects[0]).toMatchObject({
+      data: { leftValue: 7, rightValue: 7, tilt: 0 }
+    });
   });
 
   it("adds an angle marker for the selected geometry tile rotation", () => {

@@ -1,5 +1,16 @@
 import type { PointerEvent } from "react";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { getBoundingBox } from "../core/geometry";
+import {
+  getAlgebraTileLabel,
+  isAlgebraTileObject,
+  type AlgebraTileData
+} from "../manipulatives/algebraTiles/algebraTiles";
+import {
+  formatBalanceRelation,
+  isBalanceScaleObject,
+  type BalanceScaleData
+} from "../manipulatives/balanceScale/balanceScale";
 import {
   formatFraction,
   isFractionBarObject,
@@ -67,28 +78,65 @@ export function ObjectLayer({
       className="object-layer"
       transform={`translate(${-viewport.x * viewport.zoom} ${-viewport.y * viewport.zoom}) scale(${viewport.zoom})`}
     >
-      {visibleObjects.map((object) => {
-        const box = getBoundingBox(object);
+      {visibleObjects.map((object) => (
+        <ErrorBoundary
+          key={object.id}
+          fallback={<ObjectRenderFallback objectId={object.id} />}
+        >
+          <ObjectNode
+            object={object}
+            isSelected={selectedObjectIds.includes(object.id)}
+            onObjectPointerDown={onObjectPointerDown}
+            onTenFrameCellPointerDown={onTenFrameCellPointerDown}
+          />
+        </ErrorBoundary>
+      ))}
+    </g>
+  );
+}
 
-        return (
-          <g
-            key={object.id}
-            className={
-              selectedObjectIds.includes(object.id)
-                ? "scene-object scene-object-selected"
-                : "scene-object"
-            }
-            data-object-id={object.id}
-            transform={`rotate(${object.rotation} ${box.x + box.width / 2} ${box.y + box.height / 2})`}
-            onPointerDown={(event) => onObjectPointerDown(event, object.id)}
-          >
-            <DemoObject
-              object={object}
-              onTenFrameCellPointerDown={onTenFrameCellPointerDown}
-            />
-          </g>
-        );
-      })}
+function ObjectNode({
+  object,
+  isSelected,
+  onObjectPointerDown,
+  onTenFrameCellPointerDown
+}: {
+  object: SceneObject;
+  isSelected: boolean;
+  onObjectPointerDown: (
+    event: PointerEvent<SVGGElement>,
+    objectId: string
+  ) => void;
+  onTenFrameCellPointerDown: (
+    event: PointerEvent<SVGElement>,
+    objectId: string,
+    cellIndex: number
+  ) => void;
+}) {
+  const box = getBoundingBox(object);
+
+  return (
+    <g
+      className={isSelected ? "scene-object scene-object-selected" : "scene-object"}
+      data-object-id={object.id}
+      transform={`rotate(${object.rotation} ${box.x + box.width / 2} ${box.y + box.height / 2})`}
+      onPointerDown={(event) => onObjectPointerDown(event, object.id)}
+    >
+      <DemoObject
+        object={object}
+        onTenFrameCellPointerDown={onTenFrameCellPointerDown}
+      />
+    </g>
+  );
+}
+
+function ObjectRenderFallback({ objectId }: { objectId: string }) {
+  return (
+    <g className="object-render-fallback" role="img" aria-label="教具显示失败">
+      <rect x={16} y={16} width={168} height={44} rx={8} />
+      <text x={28} y={42}>
+        教具显示失败：{objectId}
+      </text>
     </g>
   );
 }
@@ -128,8 +176,16 @@ function DemoObject({
     return <FractionCircleObject object={object} />;
   }
 
+  if (isAlgebraTileObject(object)) {
+    return <AlgebraTileObject object={object} />;
+  }
+
   if (isGeometryTileObject(object)) {
     return <GeometryTileObject object={object} />;
+  }
+
+  if (isBalanceScaleObject(object)) {
+    return <BalanceScaleObject object={object} />;
   }
 
   if (isMeasurementToolObject(object)) {
@@ -191,6 +247,175 @@ function DemoObject({
       />
       <ObjectLabel object={object} box={box} />
     </>
+  );
+}
+
+function AlgebraTileObject({
+  object
+}: {
+  object: SceneObject<AlgebraTileData>;
+}) {
+  const box = getBoundingBox(object);
+  const palette =
+    object.data.sign === "positive"
+      ? { fill: "#d9f2ff", stroke: "#3b82a0" }
+      : { fill: "#ffe0e0", stroke: "#b45454" };
+  const label = object.label || getAlgebraTileLabel(object.data.tileKind, object.data.sign);
+  const fontSize = Math.max(14, Math.min(24, Math.min(box.width, box.height) * 0.42));
+
+  return (
+    <>
+      <rect
+        className="algebra-tile-shape"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={object.data.tileKind === "unit" ? 4 : 6}
+        fill={palette.fill}
+        stroke={palette.stroke}
+      />
+      <line
+        className="algebra-tile-highlight"
+        x1={box.x + 6}
+        y1={box.y + 6}
+        x2={box.x + box.width - 6}
+        y2={box.y + 6}
+      />
+      {object.data.showLabel ? (
+        <text
+          className="algebra-tile-label"
+          x={box.x + box.width / 2}
+          y={box.y + box.height / 2}
+          dominantBaseline="middle"
+          textAnchor="middle"
+          fontSize={fontSize}
+        >
+          {label}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function BalanceScaleObject({
+  object
+}: {
+  object: SceneObject<BalanceScaleData>;
+}) {
+  const box = getBoundingBox(object);
+  const centerX = box.x + box.width / 2;
+  const beamY = box.y + box.height * 0.38;
+  const baseY = box.y + box.height - 12;
+  const halfBeam = box.width * 0.38;
+  const angle = (object.data.tilt * Math.PI) / 180;
+  const leftBeam = {
+    x: centerX - halfBeam * Math.cos(angle),
+    y: beamY - halfBeam * Math.sin(angle)
+  };
+  const rightBeam = {
+    x: centerX + halfBeam * Math.cos(angle),
+    y: beamY + halfBeam * Math.sin(angle)
+  };
+  const panWidth = Math.max(46, box.width * 0.24);
+  const panHeight = Math.max(12, box.height * 0.08);
+  const chainLength = box.height * 0.2;
+  const leftPanY = leftBeam.y + chainLength;
+  const rightPanY = rightBeam.y + chainLength;
+
+  return (
+    <>
+      <line
+        className="balance-scale-stand"
+        x1={centerX}
+        y1={beamY}
+        x2={centerX}
+        y2={baseY}
+      />
+      <path
+        className="balance-scale-base"
+        d={`M ${centerX - 38} ${baseY} L ${centerX} ${beamY + 24} L ${centerX + 38} ${baseY} Z`}
+      />
+      <line
+        className="balance-scale-beam"
+        x1={leftBeam.x}
+        y1={leftBeam.y}
+        x2={rightBeam.x}
+        y2={rightBeam.y}
+      />
+      <circle className="balance-scale-pivot" cx={centerX} cy={beamY} r={6} />
+      <BalancePan
+        x={leftBeam.x}
+        y={leftPanY}
+        chainTopY={leftBeam.y}
+        width={panWidth}
+        height={panHeight}
+        value={object.data.leftValue}
+        showValue={object.data.showValues}
+      />
+      <BalancePan
+        x={rightBeam.x}
+        y={rightPanY}
+        chainTopY={rightBeam.y}
+        width={panWidth}
+        height={panHeight}
+        value={object.data.rightValue}
+        showValue={object.data.showValues}
+      />
+      {object.data.showValues ? (
+        <text
+          className="balance-scale-relation"
+          x={centerX}
+          y={box.y + 18}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          {formatBalanceRelation(object.data.leftValue, object.data.rightValue)}
+        </text>
+      ) : null}
+    </>
+  );
+}
+
+function BalancePan({
+  x,
+  y,
+  chainTopY,
+  width,
+  height,
+  value,
+  showValue
+}: {
+  x: number;
+  y: number;
+  chainTopY: number;
+  width: number;
+  height: number;
+  value: number;
+  showValue: boolean;
+}) {
+  return (
+    <g>
+      <line className="balance-scale-chain" x1={x} y1={chainTopY} x2={x} y2={y} />
+      <ellipse
+        className="balance-scale-pan"
+        cx={x}
+        cy={y}
+        rx={width / 2}
+        ry={height}
+      />
+      {showValue ? (
+        <text
+          className="balance-scale-value"
+          x={x}
+          y={y - height - 8}
+          dominantBaseline="middle"
+          textAnchor="middle"
+        >
+          {value}
+        </text>
+      ) : null}
+    </g>
   );
 }
 

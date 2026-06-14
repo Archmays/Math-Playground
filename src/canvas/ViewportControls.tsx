@@ -20,7 +20,7 @@ export function ViewportControls({
       <button type="button" onClick={onZoomIn} aria-label="放大画布">
         +
       </button>
-      <button type="button" onClick={onResetView}>
+      <button type="button" onClick={onResetView} aria-label="重置画布视图">
         重置
       </button>
     </div>

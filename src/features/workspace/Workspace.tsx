@@ -4,6 +4,28 @@ import { AppHeader } from "../../components/AppHeader";
 import type { SceneObject } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 import {
+  LESSON_CARDS,
+  checkLessonCard,
+  loadLessonCard,
+  type LessonCard,
+  type LessonCheckResult
+} from "../lessons/lessons";
+import {
+  getAlgebraTileLabel,
+  isAlgebraTileKind,
+  isAlgebraTileObject,
+  isAlgebraTileSign,
+  simplifyAlgebraTiles,
+  updateAlgebraTileData,
+  type AlgebraTileKind,
+  type AlgebraTileSign
+} from "../../manipulatives/algebraTiles/algebraTiles";
+import {
+  formatBalanceRelation,
+  isBalanceScaleObject,
+  updateBalanceScaleData
+} from "../../manipulatives/balanceScale/balanceScale";
+import {
   getSelectedFractionSummary,
   isFractionBarObject,
   MAX_DENOMINATOR,
@@ -62,6 +84,14 @@ import {
   parseAutoSavedScene,
   saveSceneJson
 } from "./sceneFileUtils";
+import {
+  HELP_STEPS,
+  KEYBOARD_SHORTCUTS,
+  PROPERTY_EMPTY_TEXT,
+  TOOL_CATEGORIES,
+  getToolButtonCopy
+} from "./workspaceUi";
+import { APP_VERSION } from "../../version";
 
 const AUTO_SAVE_INTERVAL_MS = 5000;
 const MIN_MANUAL_SCALE = 0.1;
@@ -77,7 +107,11 @@ export function Workspace() {
     addFractionCircle,
     addGeometryTile,
     addMeasurementTool,
+    addBalanceScale,
+    addAlgebraTile,
     addSelectedGeometryRotationMarker,
+    setSelectedBalanceScaleLeftFromNumberTiles,
+    setSelectedBalanceScaleRightFromNumberTiles,
     updateSelectedObjects,
     loadScene
   } = useScene();
@@ -85,10 +119,25 @@ export function Workspace() {
   const latestSceneRef = useRef(scene);
   const [fileMessage, setFileMessage] = useState("");
   const [autoSaveReady, setAutoSaveReady] = useState(false);
+  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [lessonCheckResult, setLessonCheckResult] =
+    useState<LessonCheckResult | null>(null);
+  const [lessonHintIndex, setLessonHintIndex] = useState(0);
+  const [visibleLessonHint, setVisibleLessonHint] = useState<string | null>(null);
+  const selectedLesson =
+    LESSON_CARDS.find((lesson) => lesson.id === selectedLessonId) ?? null;
   const selectedObjects = scene.objects.filter((object) =>
     selectedObjectIds.includes(object.id)
   );
   const selectedObject = selectedObjects.length === 1 ? selectedObjects[0] : null;
+  const selectedBalanceScale = selectedObjects.find(isBalanceScaleObject) ?? null;
+  const selectedNumberTileCount = selectedObjects.filter(isNumberTileObject).length;
+  const selectedAlgebraTileCount = selectedObjects.filter(isAlgebraTileObject).length;
+  const selectedAlgebraSummary = simplifyAlgebraTiles(
+    scene.objects,
+    selectedObjectIds
+  );
   const selectedMathObjectCount = selectedObjects.filter(
     (object) => isNumberTileObject(object) || isTenFrameObject(object)
   ).length;
@@ -109,6 +158,12 @@ export function Workspace() {
   useEffect(() => {
     latestSceneRef.current = scene;
   }, [scene]);
+
+  useEffect(() => {
+    setLessonCheckResult(null);
+    setVisibleLessonHint(null);
+    setLessonHintIndex(0);
+  }, [selectedLessonId]);
 
   useEffect(() => {
     const autoSavedScene = parseAutoSavedScene(
@@ -162,6 +217,48 @@ export function Workspace() {
   const clearLocalSave = () => {
     window.localStorage.removeItem(LOCAL_SCENE_STORAGE_KEY);
     setFileMessage("已清空本地自动保存。");
+  };
+
+  const startLesson = (lesson: LessonCard) => {
+    const confirmed =
+      scene.objects.length === 0 ||
+      window.confirm("当前画布已有内容。开始任务会覆盖当前画布，是否继续？");
+    const result = loadLessonCard(lesson, scene, {
+      confirmOverwrite: confirmed
+    });
+
+    if (result.status === "blocked") {
+      setFileMessage(result.reason);
+      return;
+    }
+
+    loadScene(result.scene);
+    setFileMessage(`已载入任务卡：${lesson.title}`);
+    setLessonCheckResult(null);
+    setVisibleLessonHint(null);
+    setLessonHintIndex(0);
+  };
+
+  const checkCurrentLesson = (lesson: LessonCard) => {
+    const result = checkLessonCard(
+      lesson,
+      scene,
+      selectedObjectIds,
+      lessonHintIndex
+    );
+
+    setLessonCheckResult(result);
+    setVisibleLessonHint(result.hint ?? null);
+  };
+
+  const showLessonHint = (lesson: LessonCard) => {
+    if (lesson.hints.length === 0) {
+      return;
+    }
+
+    const hint = lesson.hints[Math.min(lessonHintIndex, lesson.hints.length - 1)];
+    setVisibleLessonHint(hint);
+    setLessonHintIndex((index) => Math.min(index + 1, lesson.hints.length - 1));
   };
 
   const addCustomNumberTile = () => {
@@ -219,267 +316,115 @@ export function Workspace() {
     addFractionCircle(numerator, denominator);
   };
 
+  const toolActions: Record<string, () => void> = {
+    help: () => setIsHelpOpen((isOpen) => !isOpen),
+    "number-1": () => addNumberTile(1),
+    "number-5": () => addNumberTile(5),
+    "number-10": () => addNumberTile(10),
+    "number-custom": addCustomNumberTile,
+    "ten-frame-empty": () => addTenFrame(0),
+    "ten-frame-5": () => addTenFrame(5),
+    "ten-frame-10": () => addTenFrame(10),
+    "fraction-bar-half": () => addFractionBar(1, 2),
+    "fraction-bar-third": () => addFractionBar(1, 3),
+    "fraction-bar-quarter": () => addFractionBar(1, 4),
+    "fraction-bar-fifth": () => addFractionBar(1, 5),
+    "fraction-bar-eighth": () => addFractionBar(1, 8),
+    "fraction-bar-custom": addCustomFractionBar,
+    "fraction-circle-half": () => addFractionCircle(1, 2),
+    "fraction-circle-third": () => addFractionCircle(1, 3),
+    "fraction-circle-quarter": () => addFractionCircle(1, 4),
+    "fraction-circle-sixth": () => addFractionCircle(1, 6),
+    "fraction-circle-eighth": () => addFractionCircle(1, 8),
+    "fraction-circle-custom": addCustomFractionCircle,
+    "geometry-triangle": () => addGeometryTile("triangle"),
+    "geometry-square": () => addGeometryTile("square"),
+    "geometry-rectangle": () => addGeometryTile("rectangle"),
+    "geometry-hexagon": () => addGeometryTile("hexagon"),
+    "geometry-circle": () => addGeometryTile("circle"),
+    "geometry-trapezoid": () => addGeometryTile("trapezoid"),
+    "geometry-parallelogram": () => addGeometryTile("parallelogram"),
+    "measurement-ruler": () => addMeasurementTool("ruler"),
+    "measurement-protractor": () => addMeasurementTool("protractor"),
+    "measurement-angle": () => addMeasurementTool("angleMarker"),
+    "measurement-line": () => addMeasurementTool("lineSegment"),
+    "balance-empty": () => addBalanceScale(0, 0),
+    "balance-equal": () => addBalanceScale(5, 5),
+    "balance-less": () => addBalanceScale(3, 7),
+    "algebra-unit-positive": () => addAlgebraTile("unit", "positive"),
+    "algebra-unit-negative": () => addAlgebraTile("unit", "negative"),
+    "algebra-x-positive": () => addAlgebraTile("x", "positive"),
+    "algebra-x-negative": () => addAlgebraTile("x", "negative"),
+    "algebra-x2-positive": () => addAlgebraTile("x2", "positive"),
+    "algebra-x2-negative": () => addAlgebraTile("x2", "negative"),
+    "demo-rectangle": () => addDemoObject("demo-rectangle"),
+    "demo-circle": () => addDemoObject("demo-circle"),
+    "demo-text": () => addDemoObject("demo-text"),
+    "file-save-json": () => {
+      saveSceneJson(scene);
+      setFileMessage("已保存 JSON 画布文件。");
+    },
+    "file-load-json": () => fileInputRef.current?.click(),
+    "file-export-svg": () => {
+      exportSceneSvg(scene);
+      setFileMessage("已导出 SVG 图片。");
+    },
+    "file-export-png": () => {
+      exportScenePng(scene)
+        .then(() => setFileMessage("已导出 PNG 图片。"))
+        .catch(() => setFileMessage("PNG 导出失败，请稍后重试。"));
+    },
+    "file-clear-local": clearLocalSave
+  };
+
   return (
     <main className="workspace">
       <AppHeader />
-      <aside className="tool-panel" aria-label="工具栏">
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addNumberTile(1)}
-        >
-          数字 1
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addNumberTile(5)}
-        >
-          数字 5
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addNumberTile(10)}
-        >
-          数字 10
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={addCustomNumberTile}
-        >
-          自定义数字
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addTenFrame(0)}
-        >
-          空十格阵
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addTenFrame(5)}
-        >
-          5 点十格阵
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addTenFrame(10)}
-        >
-          10 点十格阵
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionBar(1, 2)}
-        >
-          1/2
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionBar(1, 3)}
-        >
-          1/3
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionBar(1, 4)}
-        >
-          1/4
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionBar(1, 5)}
-        >
-          1/5
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionBar(1, 8)}
-        >
-          1/8
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={addCustomFractionBar}
-        >
-          自定义分数
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionCircle(1, 2)}
-        >
-          圆 1/2
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionCircle(1, 3)}
-        >
-          圆 1/3
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionCircle(1, 4)}
-        >
-          圆 1/4
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionCircle(1, 6)}
-        >
-          圆 1/6
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addFractionCircle(1, 8)}
-        >
-          圆 1/8
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={addCustomFractionCircle}
-        >
-          自定义分数圆
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("triangle")}
-        >
-          等边三角形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("square")}
-        >
-          正方形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("rectangle")}
-        >
-          长方形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("hexagon")}
-        >
-          正六边形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("circle")}
-        >
-          圆形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("trapezoid")}
-        >
-          梯形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addGeometryTile("parallelogram")}
-        >
-          平行四边形
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addMeasurementTool("ruler")}
-        >
-          直尺
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addMeasurementTool("protractor")}
-        >
-          量角器
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addMeasurementTool("angleMarker")}
-        >
-          角度弧
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addMeasurementTool("lineSegment")}
-        >
-          线段
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addDemoObject("demo-rectangle")}
-        >
-          添加矩形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addDemoObject("demo-circle")}
-        >
-          添加圆形
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => addDemoObject("demo-text")}
-        >
-          添加文字
-        </button>
-        <div className="tool-divider" />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => saveSceneJson(scene)}
-        >
-          保存 JSON
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          读取 JSON
-        </button>
+      <aside className="tool-panel" aria-label="教具工具栏">
+        {TOOL_CATEGORIES.map((category) => (
+          <ToolSection
+            key={category.id}
+            title={category.label}
+            description={category.description}
+          >
+            <div className="tool-grid">
+              {category.buttonIds.map((buttonId) => (
+                <ToolButton
+                  key={buttonId}
+                  buttonId={buttonId}
+                  active={buttonId === "help" && isHelpOpen}
+                  onClick={toolActions[buttonId]}
+                />
+              ))}
+            </div>
+            {category.id === "tasks" ? (
+              <section className="lesson-picker" aria-label="任务卡列表">
+                {LESSON_CARDS.map((lesson) => (
+                  <button
+                    key={lesson.id}
+                    type="button"
+                    aria-label={`预览任务卡：${lesson.title}`}
+                    className={
+                      selectedLesson?.id === lesson.id
+                        ? "lesson-card-button lesson-card-button-active"
+                        : "lesson-card-button"
+                    }
+                    onClick={() => setSelectedLessonId(lesson.id)}
+                  >
+                    <span>{lesson.title}</span>
+                    <small>{lesson.topic}</small>
+                  </button>
+                ))}
+              </section>
+            ) : null}
+          </ToolSection>
+        ))}
         <input
           ref={fileInputRef}
           className="visually-hidden"
           type="file"
           accept="application/json,.json"
+          aria-label="读取 JSON 画布文件"
           onChange={(event) => {
             const file = event.target.files?.[0];
             event.target.value = "";
@@ -489,27 +434,6 @@ export function Workspace() {
             }
           }}
         />
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => exportSceneSvg(scene)}
-        >
-          导出 SVG
-        </button>
-        <button
-          type="button"
-          className="tool-button"
-          onClick={() => {
-            exportScenePng(scene)
-              .then(() => setFileMessage("已导出 PNG 图片。"))
-              .catch(() => setFileMessage("PNG 导出失败，请稍后重试。"));
-          }}
-        >
-          导出 PNG
-        </button>
-        <button type="button" className="tool-button" onClick={clearLocalSave}>
-          清空本地保存
-        </button>
       </aside>
       <MathCanvas />
       <aside className="property-panel" aria-label="属性面板">
@@ -519,6 +443,32 @@ export function Workspace() {
           <p className="number-tile-sum">
             选中总数：{selectedMathValue}
           </p>
+        ) : null}
+        {selectedBalanceScale && selectedNumberTileCount > 0 ? (
+          <div className="balance-selection-summary">
+            <p>选中数字方块总和：{selectedMathValue}</p>
+            <button
+              type="button"
+              className="property-action-button"
+              aria-label="把选中的数字方块总和设为天平左边"
+              onClick={setSelectedBalanceScaleLeftFromNumberTiles}
+            >
+              把选中数字方块总和设为左边
+            </button>
+            <button
+              type="button"
+              className="property-action-button"
+              aria-label="把选中的数字方块总和设为天平右边"
+              onClick={setSelectedBalanceScaleRightFromNumberTiles}
+            >
+              把选中数字方块总和设为右边
+            </button>
+          </div>
+        ) : null}
+        {selectedAlgebraTileCount > 1 ? (
+          <div className="algebra-selection-summary">
+            <p>合并同类项：{selectedAlgebraSummary.expression}</p>
+          </div>
         ) : null}
         {selectedFractionSummary.fractions.length > 1 ? (
           <div className="fraction-selection-summary">
@@ -548,6 +498,17 @@ export function Workspace() {
           </div>
         ) : null}
         {fileMessage ? <p className="file-message">{fileMessage}</p> : null}
+        {isHelpOpen ? <HelpPanel onClose={() => setIsHelpOpen(false)} /> : null}
+        {selectedLesson ? (
+          <LessonPreview
+            lesson={selectedLesson}
+            checkResult={lessonCheckResult}
+            visibleHint={visibleLessonHint}
+            onCheck={checkCurrentLesson}
+            onShowHint={showLessonHint}
+            onStart={startLesson}
+          />
+        ) : null}
         {selectedObject ? (
           <ObjectInspector
             object={selectedObject}
@@ -555,7 +516,7 @@ export function Workspace() {
             onChange={updateSelectedObjects}
           />
         ) : (
-          <p>单选对象后，这里会显示可编辑属性。</p>
+          <p>{PROPERTY_EMPTY_TEXT}</p>
         )}
       </aside>
       <footer className="status-bar">
@@ -563,8 +524,87 @@ export function Workspace() {
         <span>对象：{scene.objects.length}</span>
         <span>选中：{selectedObjectIds.length}</span>
         <span>选中总数：{selectedMathValue}</span>
+        <span>版本：v{APP_VERSION}</span>
       </footer>
     </main>
+  );
+}
+
+function ToolSection({
+  title,
+  description,
+  children
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="tool-section" aria-label={`${title}工具`}>
+      <div className="tool-section-header">
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ToolButton({
+  buttonId,
+  active = false,
+  onClick
+}: {
+  buttonId: string;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  const copy = getToolButtonCopy(buttonId);
+
+  return (
+    <button
+      type="button"
+      className={active ? "tool-button tool-button-active" : "tool-button"}
+      aria-label={copy.ariaLabel}
+      onClick={onClick}
+    >
+      {copy.label}
+    </button>
+  );
+}
+
+function HelpPanel({ onClose }: { onClose: () => void }) {
+  return (
+    <section className="help-panel" aria-label="使用帮助">
+      <div className="help-panel-header">
+        <h3>怎么使用？</h3>
+        <button
+          type="button"
+          className="help-close-button"
+          aria-label="关闭使用帮助"
+          onClick={onClose}
+        >
+          关闭
+        </button>
+      </div>
+      <ol>
+        {HELP_STEPS.map((step) => (
+          <li key={step.title}>
+            <strong>{step.title}</strong>
+            <span>{step.body}</span>
+          </li>
+        ))}
+      </ol>
+      <h4>键盘快捷键</h4>
+      <dl className="shortcut-list">
+        {KEYBOARD_SHORTCUTS.map((shortcut) => (
+          <div key={shortcut.keys}>
+            <dt>{shortcut.keys}</dt>
+            <dd>{shortcut.label}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -580,34 +620,34 @@ function ObjectInspector({
   return (
     <div className="property-form">
       <NumberPropertyField
-        label="x"
+        label="横向位置 x"
         value={object.x}
         onChange={(value) => onChange({ x: value })}
       />
       <NumberPropertyField
-        label="y"
+        label="纵向位置 y"
         value={object.y}
         onChange={(value) => onChange({ y: value })}
       />
       <NumberPropertyField
-        label="rotation"
+        label="旋转角度"
         value={object.rotation}
         onChange={(value) => onChange({ rotation: value })}
       />
       <NumberPropertyField
-        label="scaleX"
+        label="横向缩放"
         value={object.scaleX}
         min={MIN_MANUAL_SCALE}
         onChange={(value) => onChange({ scaleX: value })}
       />
       <NumberPropertyField
-        label="scaleY"
+        label="纵向缩放"
         value={object.scaleY}
         min={MIN_MANUAL_SCALE}
         onChange={(value) => onChange({ scaleY: value })}
       />
       <label className="property-field">
-        <span>label</span>
+        <span>名称</span>
         <input
           value={object.label}
           onChange={(event) => onChange({ label: event.target.value })}
@@ -635,6 +675,12 @@ function ObjectInspector({
       {isMeasurementToolObject(object) ? (
         <MeasurementToolInspectorFields object={object} onChange={onChange} />
       ) : null}
+      {isBalanceScaleObject(object) ? (
+        <BalanceScaleInspectorFields object={object} onChange={onChange} />
+      ) : null}
+      {isAlgebraTileObject(object) ? (
+        <AlgebraTileInspectorFields object={object} onChange={onChange} />
+      ) : null}
       <label className="property-check">
         <input
           type="checkbox"
@@ -652,6 +698,82 @@ function ObjectInspector({
         显示对象
       </label>
     </div>
+  );
+}
+
+function LessonPreview({
+  lesson,
+  checkResult,
+  visibleHint,
+  onCheck,
+  onShowHint,
+  onStart
+}: {
+  lesson: LessonCard;
+  checkResult: LessonCheckResult | null;
+  visibleHint: string | null;
+  onCheck: (lesson: LessonCard) => void;
+  onShowHint: (lesson: LessonCard) => void;
+  onStart: (lesson: LessonCard) => void;
+}) {
+  return (
+    <section className="lesson-preview">
+      <div className="lesson-preview-header">
+        <p>{lesson.gradeBand}</p>
+        <h3>{lesson.title}</h3>
+      </div>
+      <p>{lesson.description}</p>
+      <h4>任务步骤</h4>
+      <ol>
+        {lesson.instructions.map((instruction) => (
+          <li key={instruction}>{instruction}</li>
+        ))}
+      </ol>
+      <h4>完成标准</h4>
+      <ul>
+        {lesson.successCriteria.map((criterion) => (
+          <li key={criterion}>{criterion}</li>
+        ))}
+      </ul>
+      {checkResult ? (
+        <p
+          className={
+            checkResult.isCorrect
+              ? "lesson-feedback lesson-feedback-correct"
+              : "lesson-feedback"
+          }
+        >
+          {checkResult.message}
+        </p>
+      ) : null}
+      {visibleHint ? <p className="lesson-hint">提示：{visibleHint}</p> : null}
+      <div className="lesson-actions">
+        <button
+          type="button"
+          className="property-action-button"
+          aria-label={`检查任务答案：${lesson.title}`}
+          onClick={() => onCheck(lesson)}
+        >
+          检查答案
+        </button>
+        <button
+          type="button"
+          className="property-action-button"
+          aria-label={`显示任务提示：${lesson.title}`}
+          onClick={() => onShowHint(lesson)}
+        >
+          显示一个提示
+        </button>
+      </div>
+      <button
+        type="button"
+        className="property-action-button"
+        aria-label={`开始任务：${lesson.title}`}
+        onClick={() => onStart(lesson)}
+      >
+        开始任务
+      </button>
+    </section>
   );
 }
 
@@ -702,7 +824,7 @@ function TenFrameInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>filledCount</span>
+        <span>已填数量</span>
         <input
           type="number"
           min={0}
@@ -720,7 +842,7 @@ function TenFrameInspectorFields({
         />
       </label>
       <label className="property-field">
-        <span>tokenShape</span>
+        <span>点子形状</span>
         <select
           value={object.data.tokenShape}
           onChange={(event) => {
@@ -733,12 +855,12 @@ function TenFrameInspectorFields({
             }
           }}
         >
-          <option value="circle">circle</option>
-          <option value="square">square</option>
+          <option value="circle">圆点</option>
+          <option value="square">方块</option>
         </select>
       </label>
       <label className="property-field">
-        <span>fillMode</span>
+        <span>填充方式</span>
         <select
           value={object.data.fillMode}
           onChange={(event) => {
@@ -762,8 +884,8 @@ function TenFrameInspectorFields({
             });
           }}
         >
-          <option value="left-to-right">left-to-right</option>
-          <option value="manual">manual</option>
+          <option value="left-to-right">自动从左到右</option>
+          <option value="manual">手动点选</option>
         </select>
       </label>
       <p className="number-tile-sum">
@@ -787,7 +909,7 @@ function FractionBarInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>numerator</span>
+        <span>分子</span>
         <input
           type="number"
           min={0}
@@ -808,7 +930,7 @@ function FractionBarInspectorFields({
         />
       </label>
       <label className="property-field">
-        <span>denominator</span>
+        <span>分母</span>
         <input
           type="number"
           min={MIN_DENOMINATOR}
@@ -872,7 +994,7 @@ function FractionCircleInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>numerator</span>
+        <span>分子</span>
         <input
           type="number"
           min={0}
@@ -893,7 +1015,7 @@ function FractionCircleInspectorFields({
         />
       </label>
       <label className="property-field">
-        <span>denominator</span>
+        <span>分母</span>
         <input
           type="number"
           min={MIN_DENOMINATOR}
@@ -914,7 +1036,7 @@ function FractionCircleInspectorFields({
         />
       </label>
       <label className="property-field">
-        <span>startAngle</span>
+        <span>起始角度</span>
         <input
           type="number"
           step={1}
@@ -988,7 +1110,7 @@ function GeometryTileInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>shape</span>
+        <span>图形</span>
         <select
           value={object.data.shape}
           onChange={(event) => {
@@ -1007,13 +1129,13 @@ function GeometryTileInspectorFields({
         </select>
       </label>
       <NumberPropertyField
-        label="width"
+        label="宽度"
         value={object.data.width}
         min={24}
         onChange={(value) => updateData({ width: value })}
       />
       <NumberPropertyField
-        label="height"
+        label="高度"
         value={object.data.height}
         min={24}
         onChange={(value) => updateData({ height: value })}
@@ -1057,6 +1179,7 @@ function GeometryTileInspectorFields({
       <button
         type="button"
         className="property-action-button"
+        aria-label="为选中的几何图形添加当前旋转角度标注"
         onClick={onAddRotationMarker}
       >
         添加当前旋转角度标注
@@ -1084,7 +1207,7 @@ function MeasurementToolInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>kind</span>
+        <span>工具类型</span>
         <select
           value={object.data.kind}
           onChange={(event) => {
@@ -1103,19 +1226,19 @@ function MeasurementToolInspectorFields({
         </select>
       </label>
       <NumberPropertyField
-        label="length"
+        label="长度"
         value={object.data.length}
         min={16}
         onChange={(value) => updateData({ length: value })}
       />
       <NumberPropertyField
-        label="angle"
+        label="角度"
         value={object.data.angle}
         min={0}
         onChange={(value) => updateData({ angle: value })}
       />
       <label className="property-field">
-        <span>unit</span>
+        <span>单位</span>
         <select
           value={object.data.unit}
           onChange={(event) => {
@@ -1126,9 +1249,9 @@ function MeasurementToolInspectorFields({
             }
           }}
         >
-          <option value="grid">grid</option>
+          <option value="grid">网格</option>
           <option value="cm">cm</option>
-          <option value="custom">custom</option>
+          <option value="custom">自定义</option>
         </select>
       </label>
       <label className="property-check">
@@ -1151,6 +1274,123 @@ function MeasurementToolInspectorFields({
   );
 }
 
+function BalanceScaleInspectorFields({
+  object,
+  onChange
+}: {
+  object: SceneObject;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isBalanceScaleObject(object)) {
+    return null;
+  }
+
+  const updateData = (data: Parameters<typeof updateBalanceScaleData>[1]) => {
+    const updated = updateBalanceScaleData(object, data);
+    onChange({ data: updated.data });
+  };
+
+  return (
+    <>
+      <NumberPropertyField
+        label="左边数值"
+        value={object.data.leftValue}
+        onChange={(value) => updateData({ leftValue: value })}
+      />
+      <NumberPropertyField
+        label="右边数值"
+        value={object.data.rightValue}
+        onChange={(value) => updateData({ rightValue: value })}
+      />
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showValues}
+          onChange={(event) => updateData({ showValues: event.target.checked })}
+        />
+        显示左右数值
+      </label>
+      <div className="balance-measurements">
+        <p>
+          关系：
+          {formatBalanceRelation(object.data.leftValue, object.data.rightValue)}
+        </p>
+      </div>
+    </>
+  );
+}
+
+function AlgebraTileInspectorFields({
+  object,
+  onChange
+}: {
+  object: SceneObject;
+  onChange: (patch: EditableObjectPatch) => void;
+}) {
+  if (!isAlgebraTileObject(object)) {
+    return null;
+  }
+
+  const updateData = (data: Parameters<typeof updateAlgebraTileData>[1]) => {
+    const updated = updateAlgebraTileData(object, data);
+    onChange({ label: updated.label, data: updated.data });
+  };
+
+  return (
+    <>
+      <label className="property-field">
+        <span>砖块类型</span>
+        <select
+          value={object.data.tileKind}
+          onChange={(event) => {
+            const tileKind = event.target.value;
+
+            if (isAlgebraTileKind(tileKind)) {
+              updateData({ tileKind: tileKind as AlgebraTileKind });
+            }
+          }}
+        >
+          {ALGEBRA_TILE_KINDS.map((tileKind) => (
+            <option key={tileKind} value={tileKind}>
+              {getAlgebraTileLabel(tileKind, "positive")}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="property-field">
+        <span>正负</span>
+        <select
+          value={object.data.sign}
+          onChange={(event) => {
+            const sign = event.target.value;
+
+            if (isAlgebraTileSign(sign)) {
+              updateData({ sign: sign as AlgebraTileSign });
+            }
+          }}
+        >
+          <option value="positive">正数</option>
+          <option value="negative">负数</option>
+        </select>
+      </label>
+      <label className="property-check">
+        <input
+          type="checkbox"
+          checked={object.data.showLabel}
+          onChange={(event) => updateData({ showLabel: event.target.checked })}
+        />
+        显示标签
+      </label>
+      <NumberPropertyField
+        label="x 的长度"
+        value={object.data.xLength}
+        min={40}
+        onChange={(value) => updateData({ xLength: value })}
+      />
+    </>
+  );
+}
+
 function NumberTileInspectorFields({
   object,
   onChange
@@ -1167,7 +1407,7 @@ function NumberTileInspectorFields({
   return (
     <>
       <label className="property-field">
-        <span>value</span>
+        <span>数字</span>
         <input
           type="number"
           value={object.data.value}
@@ -1200,7 +1440,7 @@ function NumberTileInspectorFields({
         显示数字
       </label>
       <label className="property-field">
-        <span>size</span>
+        <span>大小</span>
         <select
           value={size}
           onChange={(event) => {
@@ -1213,9 +1453,9 @@ function NumberTileInspectorFields({
             }
           }}
         >
-          <option value="small">small</option>
-          <option value="medium">medium</option>
-          <option value="large">large</option>
+          <option value="small">小</option>
+          <option value="medium">中</option>
+          <option value="large">大</option>
         </select>
       </label>
     </>
@@ -1250,3 +1490,5 @@ const MEASUREMENT_TOOL_KINDS: MeasurementToolKind[] = [
   "angleMarker",
   "lineSegment"
 ];
+
+const ALGEBRA_TILE_KINDS: AlgebraTileKind[] = ["unit", "x", "x2"];

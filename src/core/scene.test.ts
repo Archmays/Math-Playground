@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BUILT_IN_OBJECT_TYPES,
   cloneObject,
   createObject,
   createScene,
@@ -60,6 +61,24 @@ describe("scene model", () => {
       label: "7",
       data: { value: 7 }
     });
+  });
+
+  it("lists the implemented built-in scene object types", () => {
+    expect(BUILT_IN_OBJECT_TYPES).toEqual(
+      expect.arrayContaining([
+        "number-tile",
+        "ten-frame",
+        "fraction-bar",
+        "fraction-circle",
+        "geometry-tile",
+        "measurement-tool",
+        "balance-scale",
+        "algebra-tile",
+        "demo-rectangle",
+        "demo-circle",
+        "demo-text"
+      ])
+    );
   });
 
   it("clones an object with a new id and offset position", () => {

@@ -11,6 +11,17 @@ import {
   type Viewport
 } from "../../core/scene";
 import { panViewport, zoomAtPoint } from "../../canvas/canvasUtils";
+import {
+  createAlgebraTile,
+  type AlgebraTileKind,
+  type AlgebraTileSign
+} from "../../manipulatives/algebraTiles/algebraTiles";
+import {
+  createBalanceScale,
+  isBalanceScaleObject,
+  setLeftFromSelectedNumberTiles,
+  setRightFromSelectedNumberTiles
+} from "../../manipulatives/balanceScale/balanceScale";
 import { createFractionBar } from "../../manipulatives/fractionBars/fractionBars";
 import { createFractionCircle } from "../../manipulatives/fractionCircles/fractionCircles";
 import {
@@ -63,7 +74,10 @@ export type WorkspaceAction =
   | { type: "addFractionCircle"; numerator: number; denominator: number }
   | { type: "addGeometryTile"; shape: GeometryTileShape }
   | { type: "addMeasurementTool"; kind: MeasurementToolKind }
+  | { type: "addBalanceScale"; leftValue: number; rightValue: number }
+  | { type: "addAlgebraTile"; tileKind: AlgebraTileKind; sign: AlgebraTileSign }
   | { type: "addSelectedGeometryRotationMarker" }
+  | { type: "setSelectedBalanceScaleSideFromNumberTiles"; side: "left" | "right" }
   | { type: "toggleTenFrameCell"; objectId: string; cellIndex: number }
   | { type: "selectObject"; objectId: string }
   | { type: "toggleSelectObject"; objectId: string }
@@ -130,8 +144,14 @@ export function workspaceReducer(
       return addGeometryTile(state, action.shape);
     case "addMeasurementTool":
       return addMeasurementTool(state, action.kind);
+    case "addBalanceScale":
+      return addBalanceScale(state, action.leftValue, action.rightValue);
+    case "addAlgebraTile":
+      return addAlgebraTile(state, action.tileKind, action.sign);
     case "addSelectedGeometryRotationMarker":
       return addSelectedGeometryRotationMarker(state);
+    case "setSelectedBalanceScaleSideFromNumberTiles":
+      return setSelectedBalanceScaleSideFromNumberTiles(state, action.side);
     case "toggleTenFrameCell":
       return toggleTenFrameCell(state, action.objectId, action.cellIndex);
     case "selectObject":
@@ -352,6 +372,58 @@ export function addMeasurementTool(
   );
 }
 
+export function addBalanceScale(
+  state: WorkspaceState,
+  leftValue: number,
+  rightValue: number,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createBalanceScale({
+    id: options.id,
+    leftValue,
+    rightValue,
+    x: 112 + (index % 3) * 248,
+    y: 112 + Math.floor(index / 3) * 176
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
+export function addAlgebraTile(
+  state: WorkspaceState,
+  tileKind: AlgebraTileKind,
+  sign: AlgebraTileSign,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createAlgebraTile({
+    id: options.id,
+    tileKind,
+    sign,
+    x: 112 + (index % 5) * 104,
+    y: 112 + Math.floor(index / 5) * 112
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
+}
+
 export function addSelectedGeometryRotationMarker(
   state: WorkspaceState,
   options: { id?: string; now?: string } = {}
@@ -371,6 +443,40 @@ export function addSelectedGeometryRotationMarker(
     x: selectedGeometry.x + 24,
     y: selectedGeometry.y + 24
   });
+}
+
+export function setSelectedBalanceScaleSideFromNumberTiles(
+  state: WorkspaceState,
+  side: "left" | "right",
+  options: { now?: string } = {}
+): WorkspaceState {
+  const selectedBalanceScale = state.scene.objects.find(
+    (object) => state.selectedObjectIds.includes(object.id) && isBalanceScaleObject(object)
+  );
+
+  if (!selectedBalanceScale) {
+    return state;
+  }
+
+  const nextObjects = state.scene.objects.map((object) => {
+    if (object.id !== selectedBalanceScale.id || !isBalanceScaleObject(object)) {
+      return object;
+    }
+
+    return side === "left"
+      ? setLeftFromSelectedNumberTiles(
+          object,
+          state.scene.objects,
+          state.selectedObjectIds
+        )
+      : setRightFromSelectedNumberTiles(
+          object,
+          state.scene.objects,
+          state.selectedObjectIds
+        );
+  });
+
+  return commitIfChanged(state, nextObjects, options.now);
 }
 
 export function toggleTenFrameCell(

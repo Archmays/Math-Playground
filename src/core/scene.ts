@@ -35,17 +35,26 @@ export type ToolType =
   | "create"
   | (string & {});
 
-export type ObjectType =
-  | "number-tile"
-  | "ten-frame"
-  | "fraction-bar"
-  | "fraction-circle"
-  | "fraction-strip"
-  | "shape"
-  | "counter"
-  | "number-line"
-  | "coordinate-grid"
-  | (string & {});
+export const BUILT_IN_OBJECT_TYPES = [
+  "number-tile",
+  "ten-frame",
+  "fraction-bar",
+  "fraction-circle",
+  "geometry-tile",
+  "measurement-tool",
+  "balance-scale",
+  "algebra-tile",
+  "demo-rectangle",
+  "demo-circle",
+  "demo-text",
+  "fraction-strip",
+  "shape",
+  "counter",
+  "number-line",
+  "coordinate-grid"
+] as const;
+
+export type ObjectType = (typeof BUILT_IN_OBJECT_TYPES)[number] | (string & {});
 
 export interface SceneObject<TData extends JsonObject = JsonObject>
   extends Transform {

@@ -14,6 +14,10 @@ import {
   type EditableObjectPatch
 } from "./sceneState";
 import type { SceneObject } from "../../core/scene";
+import type {
+  AlgebraTileKind,
+  AlgebraTileSign
+} from "../../manipulatives/algebraTiles/algebraTiles";
 import type { GeometryTileShape } from "../../manipulatives/geometryTiles/geometryTiles";
 import type { MeasurementToolKind } from "../../manipulatives/measurementTools/measurementTools";
 
@@ -27,7 +31,11 @@ interface SceneContextValue {
   addFractionCircle: (numerator: number, denominator: number) => void;
   addGeometryTile: (shape: GeometryTileShape) => void;
   addMeasurementTool: (kind: MeasurementToolKind) => void;
+  addBalanceScale: (leftValue: number, rightValue: number) => void;
+  addAlgebraTile: (tileKind: AlgebraTileKind, sign: AlgebraTileSign) => void;
   addSelectedGeometryRotationMarker: () => void;
+  setSelectedBalanceScaleLeftFromNumberTiles: () => void;
+  setSelectedBalanceScaleRightFromNumberTiles: () => void;
   selectObject: (objectId: string) => void;
   toggleSelectObject: (objectId: string) => void;
   clearSelection: () => void;
@@ -95,8 +103,27 @@ export function SceneProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "addMeasurementTool", kind });
   }, []);
 
+  const addBalanceScale = useCallback((leftValue: number, rightValue: number) => {
+    dispatch({ type: "addBalanceScale", leftValue, rightValue });
+  }, []);
+
+  const addAlgebraTile = useCallback(
+    (tileKind: AlgebraTileKind, sign: AlgebraTileSign) => {
+      dispatch({ type: "addAlgebraTile", tileKind, sign });
+    },
+    []
+  );
+
   const addSelectedGeometryRotationMarker = useCallback(() => {
     dispatch({ type: "addSelectedGeometryRotationMarker" });
+  }, []);
+
+  const setSelectedBalanceScaleLeftFromNumberTiles = useCallback(() => {
+    dispatch({ type: "setSelectedBalanceScaleSideFromNumberTiles", side: "left" });
+  }, []);
+
+  const setSelectedBalanceScaleRightFromNumberTiles = useCallback(() => {
+    dispatch({ type: "setSelectedBalanceScaleSideFromNumberTiles", side: "right" });
   }, []);
 
   const selectObject = useCallback((objectId: string) => {
@@ -195,7 +222,11 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addFractionCircle,
       addGeometryTile,
       addMeasurementTool,
+      addBalanceScale,
+      addAlgebraTile,
       addSelectedGeometryRotationMarker,
+      setSelectedBalanceScaleLeftFromNumberTiles,
+      setSelectedBalanceScaleRightFromNumberTiles,
       selectObject,
       toggleSelectObject,
       clearSelection,
@@ -222,7 +253,11 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addFractionCircle,
       addGeometryTile,
       addMeasurementTool,
+      addBalanceScale,
+      addAlgebraTile,
       addSelectedGeometryRotationMarker,
+      setSelectedBalanceScaleLeftFromNumberTiles,
+      setSelectedBalanceScaleRightFromNumberTiles,
       addNumberTile,
       addTenFrame,
       clearSelection,
