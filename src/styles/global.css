@@ -742,6 +742,7 @@ textarea:focus-visible,
 .scene-object-selected .measurement-protractor-reading-arc,
 .scene-object-selected .measurement-angle-arc,
 .scene-object-selected .measurement-line-segment,
+.scene-object-selected .number-line-axis,
 .scene-object-selected .balance-scale-beam,
 .scene-object-selected .balance-scale-pan {
   stroke: #2f7f95;
@@ -964,6 +965,31 @@ textarea:focus-visible,
 .measurement-protractor-number-major {
   font-size: 10px;
   font-weight: 850;
+}
+
+.number-line-hit-area {
+  fill: transparent;
+}
+
+.number-line-axis {
+  stroke: #3f5f6f;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.number-line-tick {
+  stroke: #3f5f6f;
+  stroke-width: 1.6;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.number-line-label {
+  fill: #2f3f4a;
+  font-size: 11px;
+  font-weight: 750;
+  pointer-events: none;
 }
 
 .measurement-protractor-body {

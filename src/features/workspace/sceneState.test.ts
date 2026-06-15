@@ -14,6 +14,7 @@ import {
   addFractionCircle,
   addGeometryTile,
   addMeasurementTool,
+  addNumberLine,
   addTangramSet,
   addSelectedGeometryRotationMarker,
   addTenFrame,
@@ -473,6 +474,26 @@ describe("workspace scene selection state", () => {
     const selected = toggleSelectObject(selectObject(createState(), "rect-1"), "circle-1");
 
     expect(selectObjects(selected, []).selectedObjectIds).toEqual([]);
+  });
+
+  it("adds a number line and selects it", () => {
+    const state = addNumberLine(createEmptyState(), {
+      id: "number-line-1",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "number-line-1",
+      type: "number-line",
+      label: "数轴",
+      data: {
+        min: 0,
+        max: 10,
+        step: 1,
+        showLabels: true
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["number-line-1"]);
   });
 
   it("moves one selected object forward and backward in layer order", () => {

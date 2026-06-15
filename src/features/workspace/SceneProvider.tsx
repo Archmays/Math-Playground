@@ -36,6 +36,7 @@ interface SceneContextValue {
   addGeometryTile: (shape: GeometryTileShape) => void;
   addTangramSet: () => void;
   addMeasurementTool: (kind: MeasurementToolKind) => void;
+  addNumberLine: () => void;
   addBalanceScale: (leftValue: number, rightValue: number) => void;
   addAlgebraTile: (tileKind: AlgebraTileKind, sign: AlgebraTileSign) => void;
   addSelectedGeometryRotationMarker: () => void;
@@ -127,6 +128,10 @@ export function SceneProvider({ children }: { children: ReactNode }) {
 
   const addMeasurementTool = useCallback((kind: MeasurementToolKind) => {
     dispatch({ type: "addMeasurementTool", kind });
+  }, []);
+
+  const addNumberLine = useCallback(() => {
+    dispatch({ type: "addNumberLine" });
   }, []);
 
   const addBalanceScale = useCallback((leftValue: number, rightValue: number) => {
@@ -287,6 +292,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addGeometryTile,
       addTangramSet,
       addMeasurementTool,
+      addNumberLine,
       addBalanceScale,
       addAlgebraTile,
       addSelectedGeometryRotationMarker,
@@ -325,6 +331,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addGeometryTile,
       addTangramSet,
       addMeasurementTool,
+      addNumberLine,
       addBalanceScale,
       addAlgebraTile,
       addSelectedGeometryRotationMarker,

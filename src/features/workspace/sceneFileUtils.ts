@@ -1,6 +1,10 @@
 import { getBoundingBox, rotatePoint } from "../../core/geometry";
 import type { BoundingBox, Scene, SceneObject } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
+import {
+  getNumberLineTicks,
+  isNumberLineObject
+} from "../../manipulatives/numberLine/numberLine";
 
 export const LOCAL_SCENE_STORAGE_KEY = "math-playground:auto-save:scene";
 
@@ -213,6 +217,37 @@ function renderObjectSvg(object: SceneObject): string {
         box.width
       )}" height="${round(box.height)}" rx="8" fill="#ffffff" stroke="#c6d5de" stroke-width="2"/>`,
       renderLabel(text, centerX, centerY),
+      `</g>`
+    ].join("");
+  }
+
+  if (isNumberLineObject(object)) {
+    const axisY = box.y + box.height * 0.5;
+    const ticks = getNumberLineTicks(object.data);
+
+    return [
+      `<g data-object-type="number-line" transform="${transform}">`,
+      `<line x1="${round(box.x)}" y1="${round(axisY)}" x2="${round(
+        box.x + box.width
+      )}" y2="${round(axisY)}" stroke="#3f5f6f" stroke-width="2.4" stroke-linecap="round"/>`,
+      ticks
+        .map((tick) => {
+          const x = box.x + tick.offset;
+
+          return [
+            `<line x1="${round(x)}" y1="${round(axisY - 10)}" x2="${round(
+              x
+            )}" y2="${round(axisY + 10)}" stroke="#3f5f6f" stroke-width="1.6"/>`,
+            object.data.showLabels
+              ? `<text x="${round(x)}" y="${round(
+                  axisY + 28
+                )}" dominant-baseline="middle" text-anchor="middle" fill="#2f3f4a" font-family="Arial, sans-serif" font-size="11" font-weight="700">${escapeText(
+                  tick.label
+                )}</text>`
+              : ""
+          ].join("");
+        })
+        .join(""),
       `</g>`
     ].join("");
   }

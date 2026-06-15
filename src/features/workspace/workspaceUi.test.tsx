@@ -35,6 +35,7 @@ describe("workspace UI copy", () => {
     expect(categorizedButtonIds).toEqual(
       expect.arrayContaining([
         "measurement-ruler",
+        "number-line",
         "measurement-protractor",
         "balance-empty",
         "algebra-x2-negative",
@@ -52,6 +53,7 @@ describe("workspace UI copy", () => {
       "fraction-circle-half",
       "geometry-square",
       "geometry-tangram",
+      "number-line",
       "measurement-ruler",
       "balance-empty",
       "algebra-x2-positive",

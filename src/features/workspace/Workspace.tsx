@@ -119,6 +119,7 @@ export function Workspace() {
     addGeometryTile,
     addTangramSet,
     addMeasurementTool,
+    addNumberLine,
     addBalanceScale,
     addAlgebraTile,
     addSelectedGeometryRotationMarker,
@@ -423,6 +424,7 @@ export function Workspace() {
     "ten-frame-empty": () => addTenFrame(0),
     "ten-frame-5": () => addTenFrame(5),
     "ten-frame-10": () => addTenFrame(10),
+    "number-line": addNumberLine,
     "fraction-bar-half": () => addFractionBar(1, 2),
     "fraction-bar-third": () => addFractionBar(1, 3),
     "fraction-bar-quarter": () => addFractionBar(1, 4),
@@ -838,6 +840,18 @@ function ToolIcon({ name }: { name: string }) {
         <line x1="6" y1="16" x2="26" y2="16" />
         <circle cx="6" cy="16" r="3" />
         <circle cx="26" cy="16" r="3" />
+      </svg>
+    );
+  }
+
+  if (name === "number-line") {
+    return (
+      <svg {...commonProps}>
+        <line x1="5" y1="18" x2="27" y2="18" />
+        <line x1="6" y1="12" x2="6" y2="24" />
+        <line x1="16" y1="12" x2="16" y2="24" />
+        <line x1="26" y1="12" x2="26" y2="24" />
+        <text x="16" y="10">0</text>
       </svg>
     );
   }

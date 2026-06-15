@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { createScene } from "../../core/scene";
 import { serializeScene } from "../../core/sceneSerialization";
-import { parseAutoSavedScene } from "./sceneFileUtils";
+import { createNumberLine } from "../../manipulatives/numberLine/numberLine";
+import { parseAutoSavedScene, sceneToSvgString } from "./sceneFileUtils";
 
 describe("workspace auto save restore", () => {
   it("returns empty when no auto-save text exists", () => {
@@ -28,5 +29,20 @@ describe("workspace auto save restore", () => {
       status: "error",
       error: "JSON 文件格式无效。"
     });
+  });
+});
+
+describe("workspace scene export", () => {
+  it("renders number lines as number-line SVG content", () => {
+    const scene = createScene({
+      id: "export-number-line",
+      title: "export",
+      objects: [createNumberLine({ id: "line-1", min: -1, max: 1, step: 1 })]
+    });
+
+    const svg = sceneToSvgString(scene);
+
+    expect(svg).toContain('data-object-type="number-line"');
+    expect(svg).toContain(">0<");
   });
 });

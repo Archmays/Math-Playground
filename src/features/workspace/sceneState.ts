@@ -33,6 +33,7 @@ import {
   createMeasurementTool,
   type MeasurementToolKind
 } from "../../manipulatives/measurementTools/measurementTools";
+import { createNumberLine } from "../../manipulatives/numberLine/numberLine";
 import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
 import {
   createTenFrame,
@@ -95,6 +96,7 @@ export type WorkspaceAction =
   | { type: "addGeometryTile"; shape: GeometryTileShape }
   | { type: "addTangramSet" }
   | { type: "addMeasurementTool"; kind: MeasurementToolKind }
+  | { type: "addNumberLine" }
   | { type: "addBalanceScale"; leftValue: number; rightValue: number }
   | { type: "addAlgebraTile"; tileKind: AlgebraTileKind; sign: AlgebraTileSign }
   | { type: "addSelectedGeometryRotationMarker" }
@@ -252,6 +254,8 @@ export function workspaceReducer(
       return addTangramSet(state);
     case "addMeasurementTool":
       return addMeasurementTool(state, action.kind);
+    case "addNumberLine":
+      return addNumberLine(state);
     case "addBalanceScale":
       return addBalanceScale(state, action.leftValue, action.rightValue);
     case "addAlgebraTile":
@@ -1280,6 +1284,28 @@ function getLayerInsertIndex(
 function flattenLayerItems(items: LayerItem[]): SceneObject[] {
   return items.flatMap((item) =>
     item.kind === "group" ? item.objects : [item.object]
+  );
+}
+
+export function addNumberLine(
+  state: WorkspaceState,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createNumberLine({
+    id: options.id,
+    x: 96 + (index % 2) * 408,
+    y: 112 + Math.floor(index / 2) * 128
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
   );
 }
 

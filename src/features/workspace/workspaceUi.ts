@@ -32,6 +32,7 @@ export const TOOL_BUTTONS: ToolButtonCopy[] = [
   { id: "ten-frame-empty", label: "空十格阵", englishLabel: "Empty Ten Frame", icon: "ten-frame", ariaLabel: "添加空十格阵" },
   { id: "ten-frame-5", label: "5 点十格阵", englishLabel: "Five Ten Frame", icon: "ten-frame-5", ariaLabel: "添加 5 点十格阵" },
   { id: "ten-frame-10", label: "10 点十格阵", englishLabel: "Full Ten Frame", icon: "ten-frame-10", ariaLabel: "添加 10 点十格阵" },
+  { id: "number-line", label: "数轴", englishLabel: "Number Line", icon: "number-line", ariaLabel: "添加数轴" },
   { id: "fraction-bar-half", label: "分数条 1/2", englishLabel: "Fraction Bar 1/2", icon: "fraction-bar", ariaLabel: "添加二分之一分数条" },
   { id: "fraction-bar-third", label: "分数条 1/3", englishLabel: "Fraction Bar 1/3", icon: "fraction-bar", ariaLabel: "添加三分之一分数条" },
   { id: "fraction-bar-quarter", label: "分数条 1/4", englishLabel: "Fraction Bar 1/4", icon: "fraction-bar", ariaLabel: "添加四分之一分数条" },
@@ -114,7 +115,8 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
       "number-custom",
       "ten-frame-empty",
       "ten-frame-5",
-      "ten-frame-10"
+      "ten-frame-10",
+      "number-line"
     ]
   },
   {

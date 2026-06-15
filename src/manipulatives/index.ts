@@ -7,6 +7,7 @@ export type BuiltInManipulativeKind =
   | "measurement-tool"
   | "balance-scale"
   | "algebra-tile"
+  | "number-line"
   | "fraction-strip"
   | "shape"
   | "counter";
@@ -17,5 +18,6 @@ export * from "./fractionBars/fractionBars";
 export * from "./fractionCircles/fractionCircles";
 export * from "./geometryTiles/geometryTiles";
 export * from "./measurementTools/measurementTools";
+export * from "./numberLine/numberLine";
 export * from "./numberTiles/numberTiles";
 export * from "./tenFrames/tenFrames";

@@ -39,6 +39,11 @@ import {
   type NumberTileData
 } from "../manipulatives/numberTiles/numberTiles";
 import {
+  getNumberLineTicks,
+  isNumberLineObject,
+  type NumberLineData
+} from "../manipulatives/numberLine/numberLine";
+import {
   getFilledCellPositions,
   isTenFrameObject,
   TEN_FRAME_COLUMNS,
@@ -192,6 +197,10 @@ function DemoObject({
 
   if (isMeasurementToolObject(object)) {
     return <MeasurementToolObject object={object} />;
+  }
+
+  if (isNumberLineObject(object)) {
+    return <NumberLineObject object={object} />;
   }
 
   if (object.type === "demo-circle") {
@@ -438,6 +447,62 @@ function MeasurementToolObject({
     case "lineSegment":
       return <LineSegmentObject object={object} box={box} />;
   }
+}
+
+function NumberLineObject({
+  object
+}: {
+  object: SceneObject<NumberLineData>;
+}) {
+  const box = getBoundingBox(object);
+  const axisY = box.y + box.height * 0.5;
+  const ticks = getNumberLineTicks(object.data);
+
+  return (
+    <>
+      <rect
+        className="number-line-hit-area"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={8}
+      />
+      <line
+        className="number-line-axis"
+        x1={box.x}
+        y1={axisY}
+        x2={box.x + box.width}
+        y2={axisY}
+      />
+      {ticks.map((tick) => {
+        const x = box.x + tick.offset;
+
+        return (
+          <g key={tick.label}>
+            <line
+              className="number-line-tick"
+              x1={x}
+              y1={axisY - 10}
+              x2={x}
+              y2={axisY + 10}
+            />
+            {object.data.showLabels ? (
+              <text
+                className="number-line-label"
+                x={x}
+                y={axisY + 28}
+                dominantBaseline="middle"
+                textAnchor="middle"
+              >
+                {tick.label}
+              </text>
+            ) : null}
+          </g>
+        );
+      })}
+    </>
+  );
 }
 
 function RulerObject({
