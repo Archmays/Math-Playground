@@ -6,6 +6,7 @@ import { createTenFrame } from "../../manipulatives/tenFrames/tenFrames";
 import {
   addAlgebraTile,
   addBalanceScale,
+  addCoordinateGrid,
   clearSelection,
   copySelectedObjects,
   deleteSelectedObjects,
@@ -494,6 +495,29 @@ describe("workspace scene selection state", () => {
       }
     });
     expect(state.selectedObjectIds).toEqual(["number-line-1"]);
+  });
+
+  it("adds a coordinate grid and selects it", () => {
+    const state = addCoordinateGrid(createEmptyState(), {
+      id: "coordinate-grid-1",
+      now: later
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "coordinate-grid-1",
+      type: "coordinate-grid",
+      label: "坐标网格",
+      data: {
+        xMin: -5,
+        xMax: 5,
+        yMin: -5,
+        yMax: 5,
+        step: 1,
+        showAxes: true,
+        showLabels: true
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["coordinate-grid-1"]);
   });
 
   it("moves one selected object forward and backward in layer order", () => {

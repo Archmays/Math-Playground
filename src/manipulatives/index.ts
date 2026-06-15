@@ -8,12 +8,14 @@ export type BuiltInManipulativeKind =
   | "balance-scale"
   | "algebra-tile"
   | "number-line"
+  | "coordinate-grid"
   | "fraction-strip"
   | "shape"
   | "counter";
 
 export * from "./algebraTiles/algebraTiles";
 export * from "./balanceScale/balanceScale";
+export * from "./coordinateGrid/coordinateGrid";
 export * from "./fractionBars/fractionBars";
 export * from "./fractionCircles/fractionCircles";
 export * from "./geometryTiles/geometryTiles";

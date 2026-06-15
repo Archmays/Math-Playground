@@ -2,6 +2,12 @@ import { getBoundingBox, rotatePoint } from "../../core/geometry";
 import type { BoundingBox, Scene, SceneObject } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 import {
+  getCoordinateGridAxisOffsets,
+  getCoordinateGridXTicks,
+  getCoordinateGridYTicks,
+  isCoordinateGridObject
+} from "../../manipulatives/coordinateGrid/coordinateGrid";
+import {
   getNumberLineTicks,
   isNumberLineObject
 } from "../../manipulatives/numberLine/numberLine";
@@ -248,6 +254,78 @@ function renderObjectSvg(object: SceneObject): string {
           ].join("");
         })
         .join(""),
+      `</g>`
+    ].join("");
+  }
+
+  if (isCoordinateGridObject(object)) {
+    const xTicks = getCoordinateGridXTicks(object.data);
+    const yTicks = getCoordinateGridYTicks(object.data);
+    const { xAxisOffset, yAxisOffset } = getCoordinateGridAxisOffsets(object.data);
+
+    return [
+      `<g data-object-type="coordinate-grid" transform="${transform}">`,
+      `<rect x="${round(box.x)}" y="${round(box.y)}" width="${round(
+        box.width
+      )}" height="${round(box.height)}" rx="6" fill="#ffffff" stroke="#9aa8b3" stroke-width="2"/>`,
+      xTicks
+        .map((tick) => {
+          const x = box.x + tick.offset;
+
+          return `<line x1="${round(x)}" y1="${round(box.y)}" x2="${round(
+            x
+          )}" y2="${round(box.y + box.height)}" stroke="#d7e0e7" stroke-width="1"/>`;
+        })
+        .join(""),
+      yTicks
+        .map((tick) => {
+          const y = box.y + tick.offset;
+
+          return `<line x1="${round(box.x)}" y1="${round(y)}" x2="${round(
+            box.x + box.width
+          )}" y2="${round(y)}" stroke="#d7e0e7" stroke-width="1"/>`;
+        })
+        .join(""),
+      object.data.showAxes && xAxisOffset !== null
+        ? `<line x1="${round(box.x)}" y1="${round(
+            box.y + xAxisOffset
+          )}" x2="${round(box.x + box.width)}" y2="${round(
+            box.y + xAxisOffset
+          )}" stroke="#405869" stroke-width="2.2"/>`
+        : "",
+      object.data.showAxes && yAxisOffset !== null
+        ? `<line x1="${round(box.x + yAxisOffset)}" y1="${round(
+            box.y
+          )}" x2="${round(box.x + yAxisOffset)}" y2="${round(
+            box.y + box.height
+          )}" stroke="#405869" stroke-width="2.2"/>`
+        : "",
+      object.data.showLabels
+        ? xTicks
+            .map((tick) => {
+              const x = box.x + tick.offset;
+
+              return `<text x="${round(x)}" y="${round(
+                box.y + box.height + 14
+              )}" dominant-baseline="middle" text-anchor="middle" fill="#314150" font-family="Arial, sans-serif" font-size="10" font-weight="700">${escapeText(
+                tick.label
+              )}</text>`;
+            })
+            .join("")
+        : "",
+      object.data.showLabels
+        ? yTicks
+            .map((tick) => {
+              const y = box.y + tick.offset;
+
+              return `<text x="${round(box.x - 10)}" y="${round(
+                y
+              )}" dominant-baseline="middle" text-anchor="end" fill="#314150" font-family="Arial, sans-serif" font-size="10" font-weight="700">${escapeText(
+                tick.label
+              )}</text>`;
+            })
+            .join("")
+        : "",
       `</g>`
     ].join("");
   }

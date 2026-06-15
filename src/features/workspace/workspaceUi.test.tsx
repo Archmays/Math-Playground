@@ -42,6 +42,7 @@ describe("workspace UI copy", () => {
         "file-export-png"
       ])
     );
+    expect(categorizedButtonIds).toContain("coordinate-grid");
   });
 
   it("defines key tool buttons with Chinese labels and aria labels", () => {
@@ -53,6 +54,7 @@ describe("workspace UI copy", () => {
       "fraction-circle-half",
       "geometry-square",
       "geometry-tangram",
+      "coordinate-grid",
       "number-line",
       "measurement-ruler",
       "balance-empty",

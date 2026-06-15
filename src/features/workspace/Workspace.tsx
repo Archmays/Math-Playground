@@ -118,6 +118,7 @@ export function Workspace() {
     addFractionCircle,
     addGeometryTile,
     addTangramSet,
+    addCoordinateGrid,
     addMeasurementTool,
     addNumberLine,
     addBalanceScale,
@@ -445,6 +446,7 @@ export function Workspace() {
     "geometry-trapezoid": () => addGeometryTile("trapezoid"),
     "geometry-parallelogram": () => addGeometryTile("parallelogram"),
     "geometry-tangram": addTangramSet,
+    "coordinate-grid": addCoordinateGrid,
     "measurement-ruler": () => addMeasurementTool("ruler"),
     "measurement-protractor": () => addMeasurementTool("protractor"),
     "measurement-angle": () => addMeasurementTool("angleMarker"),
@@ -799,6 +801,15 @@ function ToolIcon({ name }: { name: string }) {
         <path d="M28 4 V18 H14 Z" />
         <path d="M18 18 L28 18 L28 28 Z" />
         <path d="M18 18 L28 28 H18 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "coordinate-grid") {
+    return (
+      <svg {...commonProps}>
+        <path d="M6 6 V26 M16 6 V26 M26 6 V26 M6 6 H26 M6 16 H26 M6 26 H26" />
+        <path d="M16 4 V28 M4 16 H28" />
       </svg>
     );
   }

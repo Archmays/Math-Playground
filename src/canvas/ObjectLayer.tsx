@@ -12,6 +12,13 @@ import {
   type BalanceScaleData
 } from "../manipulatives/balanceScale/balanceScale";
 import {
+  getCoordinateGridAxisOffsets,
+  getCoordinateGridXTicks,
+  getCoordinateGridYTicks,
+  isCoordinateGridObject,
+  type CoordinateGridData
+} from "../manipulatives/coordinateGrid/coordinateGrid";
+import {
   formatFraction,
   isFractionBarObject,
   type FractionBarData
@@ -201,6 +208,10 @@ function DemoObject({
 
   if (isNumberLineObject(object)) {
     return <NumberLineObject object={object} />;
+  }
+
+  if (isCoordinateGridObject(object)) {
+    return <CoordinateGridObject object={object} />;
   }
 
   if (object.type === "demo-circle") {
@@ -501,6 +512,112 @@ function NumberLineObject({
           </g>
         );
       })}
+    </>
+  );
+}
+
+function CoordinateGridObject({
+  object
+}: {
+  object: SceneObject<CoordinateGridData>;
+}) {
+  const box = getBoundingBox(object);
+  const xTicks = getCoordinateGridXTicks(object.data);
+  const yTicks = getCoordinateGridYTicks(object.data);
+  const { xAxisOffset, yAxisOffset } = getCoordinateGridAxisOffsets(object.data);
+
+  return (
+    <>
+      <rect
+        className="coordinate-grid-background"
+        x={box.x}
+        y={box.y}
+        width={box.width}
+        height={box.height}
+        rx={6}
+      />
+      {xTicks.map((tick) => {
+        const x = box.x + tick.offset;
+
+        return (
+          <line
+            key={`x-${tick.label}`}
+            className="coordinate-grid-line"
+            x1={x}
+            y1={box.y}
+            x2={x}
+            y2={box.y + box.height}
+          />
+        );
+      })}
+      {yTicks.map((tick) => {
+        const y = box.y + tick.offset;
+
+        return (
+          <line
+            key={`y-${tick.label}`}
+            className="coordinate-grid-line"
+            x1={box.x}
+            y1={y}
+            x2={box.x + box.width}
+            y2={y}
+          />
+        );
+      })}
+      {object.data.showAxes && xAxisOffset !== null ? (
+        <line
+          className="coordinate-grid-axis"
+          x1={box.x}
+          y1={box.y + xAxisOffset}
+          x2={box.x + box.width}
+          y2={box.y + xAxisOffset}
+        />
+      ) : null}
+      {object.data.showAxes && yAxisOffset !== null ? (
+        <line
+          className="coordinate-grid-axis"
+          x1={box.x + yAxisOffset}
+          y1={box.y}
+          x2={box.x + yAxisOffset}
+          y2={box.y + box.height}
+        />
+      ) : null}
+      {object.data.showLabels
+        ? xTicks.map((tick) => {
+            const x = box.x + tick.offset;
+
+            return (
+              <text
+                key={`x-label-${tick.label}`}
+                className="coordinate-grid-label"
+                x={x}
+                y={box.y + box.height + 14}
+                dominantBaseline="middle"
+                textAnchor="middle"
+              >
+                {tick.label}
+              </text>
+            );
+          })
+        : null}
+      {object.data.showLabels
+        ? yTicks.map((tick) => {
+            const y = box.y + tick.offset;
+
+            return (
+              <text
+                key={`y-label-${tick.label}`}
+                className="coordinate-grid-label"
+                x={box.x - 10}
+                y={y}
+                dominantBaseline="middle"
+                textAnchor="end"
+              >
+                {tick.label}
+              </text>
+            );
+          })
+        : null}
     </>
   );
 }

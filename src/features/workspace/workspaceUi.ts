@@ -53,6 +53,7 @@ export const TOOL_BUTTONS: ToolButtonCopy[] = [
   { id: "geometry-trapezoid", label: "梯形", englishLabel: "Trapezoid", icon: "trapezoid", ariaLabel: "添加梯形拼板" },
   { id: "geometry-parallelogram", label: "平行四边形", englishLabel: "Parallelogram", icon: "parallelogram", ariaLabel: "添加平行四边形拼板" },
   { id: "geometry-tangram", label: "七巧板", englishLabel: "Tangram", icon: "tangram", ariaLabel: "添加七巧板" },
+  { id: "coordinate-grid", label: "坐标网格", englishLabel: "Coordinate Grid", icon: "coordinate-grid", ariaLabel: "添加坐标网格" },
   { id: "measurement-ruler", label: "直尺", englishLabel: "Ruler", icon: "ruler", ariaLabel: "添加直尺" },
   { id: "measurement-protractor", label: "量角器", englishLabel: "Protractor", icon: "protractor", ariaLabel: "添加量角器" },
   { id: "measurement-angle", label: "角度标注", englishLabel: "Angle Marker", icon: "angle", ariaLabel: "添加角度标注" },
@@ -150,7 +151,8 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
       "geometry-circle",
       "geometry-trapezoid",
       "geometry-parallelogram",
-      "geometry-tangram"
+      "geometry-tangram",
+      "coordinate-grid"
     ]
   },
   {

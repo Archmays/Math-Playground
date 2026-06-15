@@ -22,6 +22,7 @@ import {
   setLeftFromSelectedNumberTiles,
   setRightFromSelectedNumberTiles
 } from "../../manipulatives/balanceScale/balanceScale";
+import { createCoordinateGrid } from "../../manipulatives/coordinateGrid/coordinateGrid";
 import { createFractionBar } from "../../manipulatives/fractionBars/fractionBars";
 import { createFractionCircle } from "../../manipulatives/fractionCircles/fractionCircles";
 import {
@@ -95,6 +96,7 @@ export type WorkspaceAction =
   | { type: "addFractionCircle"; numerator: number; denominator: number }
   | { type: "addGeometryTile"; shape: GeometryTileShape }
   | { type: "addTangramSet" }
+  | { type: "addCoordinateGrid" }
   | { type: "addMeasurementTool"; kind: MeasurementToolKind }
   | { type: "addNumberLine" }
   | { type: "addBalanceScale"; leftValue: number; rightValue: number }
@@ -252,6 +254,8 @@ export function workspaceReducer(
       return addGeometryTile(state, action.shape);
     case "addTangramSet":
       return addTangramSet(state);
+    case "addCoordinateGrid":
+      return addCoordinateGrid(state);
     case "addMeasurementTool":
       return addMeasurementTool(state, action.kind);
     case "addNumberLine":
@@ -930,6 +934,28 @@ export function transformObjects(
   );
 
   return commitIfChanged(state, nextObjects, options.now);
+}
+
+export function addCoordinateGrid(
+  state: WorkspaceState,
+  options: { id?: string; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const object = createCoordinateGrid({
+    id: options.id,
+    x: 112 + (index % 2) * 368,
+    y: 112 + Math.floor(index / 2) * 368
+  });
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, object]
+    },
+    [object.id]
+  );
 }
 
 export function bringSelectedForward(

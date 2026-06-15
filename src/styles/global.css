@@ -743,6 +743,7 @@ textarea:focus-visible,
 .scene-object-selected .measurement-angle-arc,
 .scene-object-selected .measurement-line-segment,
 .scene-object-selected .number-line-axis,
+.scene-object-selected .coordinate-grid-background,
 .scene-object-selected .balance-scale-beam,
 .scene-object-selected .balance-scale-pan {
   stroke: #2f7f95;
@@ -989,6 +990,34 @@ textarea:focus-visible,
   fill: #2f3f4a;
   font-size: 11px;
   font-weight: 750;
+  pointer-events: none;
+}
+
+.coordinate-grid-background {
+  fill: #ffffff;
+  stroke: #9aa8b3;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.coordinate-grid-line {
+  stroke: #d7e0e7;
+  stroke-width: 1;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.coordinate-grid-axis {
+  stroke: #405869;
+  stroke-width: 2.2;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.coordinate-grid-label {
+  fill: #314150;
+  font-size: 10px;
+  font-weight: 700;
   pointer-events: none;
 }
 

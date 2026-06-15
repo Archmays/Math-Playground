@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createScene } from "../../core/scene";
 import { serializeScene } from "../../core/sceneSerialization";
+import { createCoordinateGrid } from "../../manipulatives/coordinateGrid/coordinateGrid";
 import { createNumberLine } from "../../manipulatives/numberLine/numberLine";
 import { parseAutoSavedScene, sceneToSvgString } from "./sceneFileUtils";
 
@@ -29,6 +30,19 @@ describe("workspace auto save restore", () => {
       status: "error",
       error: "JSON 文件格式无效。"
     });
+  });
+
+  it("renders coordinate grids as coordinate-grid SVG content", () => {
+    const scene = createScene({
+      id: "export-coordinate-grid",
+      title: "export",
+      objects: [createCoordinateGrid({ id: "grid-1" })]
+    });
+
+    const svg = sceneToSvgString(scene);
+
+    expect(svg).toContain('data-object-type="coordinate-grid"');
+    expect(svg).toContain(">0<");
   });
 });
 
