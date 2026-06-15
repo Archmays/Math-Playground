@@ -44,6 +44,18 @@ export interface LessonFeedback {
   incorrect: string;
 }
 
+export type LessonToolCategoryId =
+  | "common"
+  | "numbers"
+  | "fractions"
+  | "geometry";
+
+export interface LessonConstraints {
+  allowedToolCategories?: LessonToolCategoryId[];
+  allowAddObjects?: boolean;
+  allowDeleteStarterObjects?: boolean;
+}
+
 export interface LessonCheckResult {
   isCorrect: boolean | null;
   message: string;
@@ -56,10 +68,13 @@ export interface LessonCard {
   gradeBand: string;
   topic: string;
   description: string;
+  parentGuide: string;
+  constraints?: LessonConstraints;
   instructions: string[];
   starterScene: Scene;
   successCriteria: string[];
   hints: string[];
+  reflectionPrompts: string[];
   checkType: LessonCheckType;
   expected: LessonExpected;
   feedback: LessonFeedback;
@@ -84,6 +99,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "1-2",
     topic: "凑十",
     description: "用十格阵把 7 补到 10，理解 7 + 3 的凑十结构。",
+    parentGuide: "让孩子先观察空格，不急着说算式。重点听孩子能不能说出“还差几个”。",
+    constraints: {
+      allowedToolCategories: ["numbers"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察十格阵里已有的 7 个点。",
       "把数字方块 3 看作要补进去的数量。",
@@ -100,6 +120,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能说出 7 + 3 = 10", "能说明 7 还差 3 到 10"],
     hints: ["先数十格阵里的空格。", "把 3 个点补到空格里。"],
+    reflectionPrompts: ["你怎么一眼看出还差 3 个？", "如果是 6，要补几个才到 10？"],
     checkType: "scene-predicate",
     expected: { predicateId: "make-ten" },
     feedback: {
@@ -113,6 +134,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "1-2",
     topic: "进位",
     description: "用十格阵表示先凑十，再加剩下的数。",
+    parentGuide: "让孩子动手移动点子，再说“先凑十，剩下多少”。不要先要求背进位口诀。",
+    constraints: {
+      allowedToolCategories: ["numbers"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察左边 8 点十格阵和右边 5 点十格阵。",
       "先把右边的 2 个点拖到左边空格里，补满十格阵。",
@@ -129,6 +155,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能解释 8 + 5 = 10 + 3", "能得到结果 13"],
     hints: ["先看十格阵缺几个。", "把 5 拆成补十的一部分和剩下的一部分。"],
+    reflectionPrompts: ["为什么先补 2 个，而不是补 5 个？", "剩下的 3 个在算式里怎么表示？"],
     checkType: "scene-predicate",
     expected: { predicateId: "regrouping-13-full-ten" },
     feedback: {
@@ -142,6 +169,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "3-5",
     topic: "分数",
     description: "比较两条长度相同的分数条，观察 1/2 和 2/4 的覆盖长度。",
+    parentGuide: "引导孩子只比较填色长度，先不急着讲通分规则。",
+    constraints: {
+      allowedToolCategories: ["common", "fractions"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "把 1/2 和 2/4 分数条左端对齐。",
       "观察两条分数条填色部分的长度。",
@@ -158,6 +190,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能指出两条填色长度相同", "能说出 1/2 = 2/4"],
     hints: ["只比较填色长度。", "注意两条分数条的总长一样。"],
+    reflectionPrompts: ["为什么 2/4 看起来和 1/2 一样长？", "还能找到一个和 1/2 一样大的分数吗？"],
     checkType: "scene-predicate",
     expected: { predicateId: "equivalent-1-2-2-4" },
     feedback: {
@@ -171,6 +204,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "3-5",
     topic: "分数",
     description: "用等长分数条比较 3/4 和 2/3 的大小。",
+    parentGuide: "让孩子把左端对齐后看右端，避免只凭分母或分子大小猜答案。",
+    constraints: {
+      allowedToolCategories: ["common", "fractions"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "把 3/4 和 2/3 分数条左端对齐。",
       "比较两条填色部分谁更长。",
@@ -187,6 +225,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能判断 3/4 大于 2/3", "能用可视化长度解释原因"],
     hints: ["左端对齐后看右端。", "填色部分更长的分数更大。"],
+    reflectionPrompts: ["你比较的是总长还是填色长度？", "为什么分母大的分数不一定更大？"],
     checkType: "none",
     expected: null,
     feedback: {
@@ -200,6 +239,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "3-5",
     topic: "面积",
     description: "用 12 个小正方形拼出 3 行 4 列，理解乘法和面积。",
+    parentGuide: "让孩子先整理成整齐阵列，再把“几个一组”和乘法联系起来。",
+    constraints: {
+      allowedToolCategories: ["common", "geometry"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察画布上的 12 个小正方形。",
       "把它们整理成 3 行 4 列。",
@@ -223,6 +267,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能拼出 3 × 4 阵列", "能说出面积是 12 个单位"],
     hints: ["先排一行 4 个。", "再复制成 3 行。"],
+    reflectionPrompts: ["为什么 3 行 4 列是 12 个单位？", "如果换成 4 行 3 列，面积变了吗？"],
     checkType: "none",
     expected: null,
     feedback: {
@@ -236,6 +281,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "3-5",
     topic: "角度",
     description: "观察三个角度标注，比较锐角、直角和钝角。",
+    parentGuide: "先让孩子按大小排序，再用 90° 作为参照说出角的名称。",
+    constraints: {
+      allowedToolCategories: ["common", "geometry"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察 45°、90°、120° 三个角。",
       "把它们按从小到大排序。",
@@ -253,6 +303,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能识别 90° 是直角", "能区分 45° 和 120° 的大小"],
     hints: ["小于 90° 的是锐角。", "大于 90° 且小于 180° 的是钝角。"],
+    reflectionPrompts: ["你怎么判断 45° 比 90° 小？", "生活里哪里能看到接近 90° 的角？"],
     checkType: "none",
     expected: null,
     feedback: {
@@ -266,6 +317,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "3-5",
     topic: "等式",
     description: "用天平表示 3 + 4 和 7 两边平衡。",
+    parentGuide: "把天平当作“左右一样多”的图像，不要先把等号解释成做题符号。",
+    constraints: {
+      allowedToolCategories: ["common", "numbers"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察天平两边都是 7。",
       "用左边的 3 和 4 说明 3 + 4 的总和。",
@@ -284,6 +340,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能说出 3 + 4 = 7", "能解释天平平衡代表两边相等"],
     hints: ["先合并左边两个数字方块。", "平衡表示左右值相同。"],
+    reflectionPrompts: ["天平平衡说明左右有什么关系？", "如果右边换成 8，天平会怎样？"],
     checkType: "scene-predicate",
     expected: { predicateId: "balanced-scale" },
     feedback: {
@@ -297,6 +354,11 @@ export const LESSON_CARDS: LessonCard[] = [
     gradeBand: "6-8",
     topic: "代数",
     description: "用两个 x 砖和三个 1 砖表示表达式 2x + 3。",
+    parentGuide: "让孩子先按形状分组，再把同类砖读成表达式。",
+    constraints: {
+      allowedToolCategories: ["common"],
+      allowDeleteStarterObjects: false
+    },
     instructions: [
       "观察两个 +x 代数砖。",
       "观察三个 +1 代数砖。",
@@ -316,6 +378,7 @@ export const LESSON_CARDS: LessonCard[] = [
     }),
     successCriteria: ["能用代数砖表示 2x + 3", "能说出两个 x 项和三个常数项"],
     hints: ["同形状的代数砖表示同类项。", "两个 x 砖合起来是 2x。"],
+    reflectionPrompts: ["为什么两个 x 砖可以读作 2x？", "3 个 1 砖在表达式里对应哪一部分？"],
     checkType: "scene-predicate",
     expected: { predicateId: "algebra-2x-plus-3" },
     feedback: {

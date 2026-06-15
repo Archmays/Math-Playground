@@ -92,7 +92,13 @@ import {
   TOOL_CATEGORIES,
   getToolButtonCopy
 } from "./workspaceUi";
+import {
+  canDeleteSelectedObjectsInLesson,
+  getLessonToolSummary,
+  isToolButtonAllowedInLesson
+} from "./lessonConstraints";
 import { APP_VERSION } from "../../version";
+import { toggleLessonStepIndex } from "./lessonProgress";
 
 const AUTO_SAVE_INTERVAL_MS = 5000;
 const MIN_MANUAL_SCALE = 0.1;
@@ -122,16 +128,37 @@ export function Workspace() {
   const [fileMessage, setFileMessage] = useState("");
   const [autoSaveReady, setAutoSaveReady] = useState(false);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
+  const [activeLessonId, setActiveLessonId] = useState<string | null>(null);
+  const [activeLessonStarterObjectIds, setActiveLessonStarterObjectIds] =
+    useState<string[]>([]);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [lessonCheckResult, setLessonCheckResult] =
     useState<LessonCheckResult | null>(null);
   const [lessonHintIndex, setLessonHintIndex] = useState(0);
   const [visibleLessonHint, setVisibleLessonHint] = useState<string | null>(null);
+  const [completedLessonSteps, setCompletedLessonSteps] = useState<
+    Record<string, number[]>
+  >({});
   const selectedLesson =
     LESSON_CARDS.find((lesson) => lesson.id === selectedLessonId) ?? null;
+  const activeLesson =
+    LESSON_CARDS.find((lesson) => lesson.id === activeLessonId) ?? null;
   const selectedObjects = scene.objects.filter((object) =>
     selectedObjectIds.includes(object.id)
   );
+  const canDeleteSelection = canDeleteSelectedObjectsInLesson(
+    selectedObjectIds,
+    activeLessonStarterObjectIds,
+    activeLesson
+  );
+  const deleteDisabledReason =
+    activeLesson &&
+    !canDeleteSelection &&
+    selectedObjectIds.some((objectId) =>
+      activeLessonStarterObjectIds.includes(objectId)
+    )
+      ? "起始教具需要保留"
+      : undefined;
   const selectedObject = selectedObjects.length === 1 ? selectedObjects[0] : null;
   const selectedBalanceScale = selectedObjects.find(isBalanceScaleObject) ?? null;
   const selectedNumberTileCount = selectedObjects.filter(isNumberTileObject).length;
@@ -213,6 +240,8 @@ export function Workspace() {
     }
 
     loadScene(result.scene);
+    setActiveLessonId(null);
+    setActiveLessonStarterObjectIds([]);
     setFileMessage("已读取 JSON 画布文件。");
   };
 
@@ -236,6 +265,30 @@ export function Workspace() {
 
     loadScene(result.scene);
     setFileMessage(`已载入任务卡：${lesson.title}`);
+    setActiveLessonId(lesson.id);
+    setActiveLessonStarterObjectIds(
+      result.scene.objects.map((object) => object.id)
+    );
+    setCompletedLessonSteps((steps) => ({ ...steps, [lesson.id]: [] }));
+    setLessonCheckResult(null);
+    setVisibleLessonHint(null);
+    setLessonHintIndex(0);
+  };
+
+  const resetLesson = (lesson: LessonCard) => {
+    const confirmed = window.confirm("重置任务会恢复初始画布，是否继续？");
+
+    if (!confirmed) {
+      return;
+    }
+
+    loadScene(lesson.starterScene);
+    setFileMessage(`已重置任务卡：${lesson.title}`);
+    setActiveLessonId(lesson.id);
+    setActiveLessonStarterObjectIds(
+      lesson.starterScene.objects.map((object) => object.id)
+    );
+    setCompletedLessonSteps((steps) => ({ ...steps, [lesson.id]: [] }));
     setLessonCheckResult(null);
     setVisibleLessonHint(null);
     setLessonHintIndex(0);
@@ -261,6 +314,17 @@ export function Workspace() {
     const hint = lesson.hints[Math.min(lessonHintIndex, lesson.hints.length - 1)];
     setVisibleLessonHint(hint);
     setLessonHintIndex((index) => Math.min(index + 1, lesson.hints.length - 1));
+  };
+
+  const toggleLessonStep = (lesson: LessonCard, stepIndex: number) => {
+    setCompletedLessonSteps((steps) => {
+      const currentSteps = steps[lesson.id] ?? [];
+
+      return {
+        ...steps,
+        [lesson.id]: toggleLessonStepIndex(currentSteps, stepIndex)
+      };
+    });
   };
 
   const addCustomNumberTile = () => {
@@ -396,6 +460,8 @@ export function Workspace() {
                   key={buttonId}
                   buttonId={buttonId}
                   active={buttonId === "help" && isHelpOpen}
+                  disabled={!isToolButtonAllowedInLesson(buttonId, activeLesson)}
+                  disabledReason="当前任务暂不使用这个工具"
                   onClick={toolActions[buttonId]}
                 />
               ))}
@@ -438,7 +504,15 @@ export function Workspace() {
           }}
         />
       </aside>
-      <MathCanvas />
+      <MathCanvas
+        canDeleteSelectedObjects={canDeleteSelection}
+        deleteDisabledReason={deleteDisabledReason}
+        onDeleteBlocked={() => {
+          if (deleteDisabledReason) {
+            setFileMessage(deleteDisabledReason);
+          }
+        }}
+      />
       <aside className="property-panel" aria-label="属性面板">
         <h2>属性</h2>
         <p className="property-count">已选择 {selectedObjects.length} 个对象</p>
@@ -505,11 +579,16 @@ export function Workspace() {
         {selectedLesson ? (
           <LessonPreview
             lesson={selectedLesson}
+            isActive={activeLessonId === selectedLesson.id}
+            completedStepIndexes={completedLessonSteps[selectedLesson.id] ?? []}
             checkResult={lessonCheckResult}
+            toolSummary={getLessonToolSummary(selectedLesson, TOOL_CATEGORIES)}
             visibleHint={visibleLessonHint}
             onCheck={checkCurrentLesson}
+            onReset={resetLesson}
             onShowHint={showLessonHint}
             onStart={startLesson}
+            onToggleStep={toggleLessonStep}
           />
         ) : null}
         {selectedObject ? (
@@ -556,25 +635,36 @@ function ToolSection({
 function ToolButton({
   buttonId,
   active = false,
+  disabled = false,
+  disabledReason,
   onClick
 }: {
   buttonId: string;
   active?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   onClick: () => void;
 }) {
   const copy = getToolButtonCopy(buttonId);
+  const disabledTitle = disabled ? disabledReason : undefined;
 
   return (
     <button
       type="button"
       className={active ? "tool-button tool-button-active" : "tool-button"}
-      aria-label={copy.ariaLabel}
+      aria-label={
+        disabledReason && disabled
+          ? `${copy.ariaLabel}（${disabledReason}）`
+          : copy.ariaLabel
+      }
+      disabled={disabled}
+      title={disabledTitle}
       onClick={onClick}
     >
       <ToolIcon name={copy.icon} />
       <span className="tool-button-copy">
         <span>{copy.label}</span>
-        <small>{copy.englishLabel}</small>
+        <small>{disabled ? "当前任务暂不使用" : copy.englishLabel}</small>
       </span>
     </button>
   );
@@ -892,18 +982,28 @@ function ObjectInspector({
 
 function LessonPreview({
   lesson,
+  isActive,
+  completedStepIndexes,
   checkResult,
+  toolSummary,
   visibleHint,
   onCheck,
+  onReset,
   onShowHint,
-  onStart
+  onStart,
+  onToggleStep
 }: {
   lesson: LessonCard;
+  isActive: boolean;
+  completedStepIndexes: number[];
   checkResult: LessonCheckResult | null;
+  toolSummary: string;
   visibleHint: string | null;
   onCheck: (lesson: LessonCard) => void;
+  onReset: (lesson: LessonCard) => void;
   onShowHint: (lesson: LessonCard) => void;
   onStart: (lesson: LessonCard) => void;
+  onToggleStep: (lesson: LessonCard, stepIndex: number) => void;
 }) {
   return (
     <section className="lesson-preview">
@@ -912,16 +1012,34 @@ function LessonPreview({
         <h3>{lesson.title}</h3>
       </div>
       <p>{lesson.description}</p>
+      <p className="lesson-tool-summary">{toolSummary}</p>
+      <h4>家长引导</h4>
+      <p>{lesson.parentGuide}</p>
       <h4>任务步骤</h4>
-      <ol>
-        {lesson.instructions.map((instruction) => (
-          <li key={instruction}>{instruction}</li>
+      <ol className="lesson-step-list">
+        {lesson.instructions.map((instruction, index) => (
+          <li key={instruction}>
+            <label className="lesson-step-check">
+              <input
+                type="checkbox"
+                checked={completedStepIndexes.includes(index)}
+                onChange={() => onToggleStep(lesson, index)}
+              />
+              <span>{instruction}</span>
+            </label>
+          </li>
         ))}
       </ol>
       <h4>完成标准</h4>
       <ul>
         {lesson.successCriteria.map((criterion) => (
           <li key={criterion}>{criterion}</li>
+        ))}
+      </ul>
+      <h4>复盘问题</h4>
+      <ul>
+        {lesson.reflectionPrompts.map((prompt) => (
+          <li key={prompt}>{prompt}</li>
         ))}
       </ul>
       {checkResult ? (
@@ -954,14 +1072,26 @@ function LessonPreview({
           显示一个提示
         </button>
       </div>
-      <button
-        type="button"
-        className="property-action-button"
-        aria-label={`开始任务：${lesson.title}`}
-        onClick={() => onStart(lesson)}
-      >
-        开始任务
-      </button>
+      <div className="lesson-actions">
+        <button
+          type="button"
+          className="property-action-button"
+          aria-label={`开始任务：${lesson.title}`}
+          onClick={() => onStart(lesson)}
+        >
+          开始任务
+        </button>
+        {isActive ? (
+          <button
+            type="button"
+            className="property-action-button"
+            aria-label={`重置任务：${lesson.title}`}
+            onClick={() => onReset(lesson)}
+          >
+            重置任务
+          </button>
+        ) : null}
+      </div>
     </section>
   );
 }

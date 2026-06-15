@@ -83,6 +83,27 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
     buttonIds: ["help"]
   },
   {
+    id: "common",
+    label: "常用",
+    description: "文字、测量、天平和代数砖，适合家长引导探索。",
+    buttonIds: [
+      "demo-text",
+      "measurement-ruler",
+      "measurement-protractor",
+      "measurement-angle",
+      "measurement-line",
+      "balance-empty",
+      "balance-equal",
+      "balance-less",
+      "algebra-unit-positive",
+      "algebra-unit-negative",
+      "algebra-x-positive",
+      "algebra-x-negative",
+      "algebra-x2-positive",
+      "algebra-x2-negative"
+    ]
+  },
+  {
     id: "numbers",
     label: "数字",
     description: "数字方块和十格阵，适合凑十、进位和数量活动。",
@@ -127,38 +148,7 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
       "geometry-circle",
       "geometry-trapezoid",
       "geometry-parallelogram",
-      "geometry-tangram",
-      "demo-text"
-    ]
-  },
-  {
-    id: "measurement",
-    label: "测量",
-    description: "长度、角度和旋转观察工具。",
-    buttonIds: [
-      "measurement-ruler",
-      "measurement-protractor",
-      "measurement-angle",
-      "measurement-line"
-    ]
-  },
-  {
-    id: "equations",
-    label: "等式",
-    description: "用天平观察相等和不相等。",
-    buttonIds: ["balance-empty", "balance-equal", "balance-less"]
-  },
-  {
-    id: "algebra",
-    label: "代数",
-    description: "用代数砖表示常数、x 和 x²。",
-    buttonIds: [
-      "algebra-unit-positive",
-      "algebra-unit-negative",
-      "algebra-x-positive",
-      "algebra-x-negative",
-      "algebra-x2-positive",
-      "algebra-x2-negative"
+      "geometry-tangram"
     ]
   },
   {
@@ -178,7 +168,7 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
 export const HELP_STEPS: HelpStep[] = [
   {
     title: "添加教具",
-    body: "从左侧分类中选择数字、分数、几何、测量、等式或代数教具。"
+    body: "从左侧分类中选择常用、数字、分数或几何教具。"
   },
   {
     title: "拖动教具",
@@ -186,7 +176,7 @@ export const HELP_STEPS: HelpStep[] = [
   },
   {
     title: "复制/删除",
-    body: "选中教具后使用快捷键复制，或用 Delete / Backspace 删除。"
+    body: "选中教具后使用画布上的动作条，或用快捷键复制和删除。"
   },
   {
     title: "保存/读取",

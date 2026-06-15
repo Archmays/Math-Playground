@@ -18,14 +18,29 @@ describe("workspace UI copy", () => {
   it("groups tools into child-friendly Chinese categories", () => {
     expect(TOOL_CATEGORIES.map((category) => category.label)).toEqual([
       "任务",
+      "常用",
       "数字",
       "分数",
       "几何",
-      "测量",
-      "等式",
-      "代数",
       "文件"
     ]);
+  });
+
+  it("keeps every workspace tool in exactly one category", () => {
+    const categorizedButtonIds = TOOL_CATEGORIES.flatMap(
+      (category) => category.buttonIds
+    );
+
+    expect(new Set(categorizedButtonIds).size).toBe(categorizedButtonIds.length);
+    expect(categorizedButtonIds).toEqual(
+      expect.arrayContaining([
+        "measurement-ruler",
+        "measurement-protractor",
+        "balance-empty",
+        "algebra-x2-negative",
+        "file-export-png"
+      ])
+    );
   });
 
   it("defines key tool buttons with Chinese labels and aria labels", () => {

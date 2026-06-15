@@ -7,7 +7,7 @@ import {
   type PointerEvent
 } from "react";
 import type { BoundingBox, SceneObject } from "../core/scene";
-import { getBoundingBox } from "../core/geometry";
+import { getBoundingBox, snapToGrid } from "../core/geometry";
 import { useScene } from "../features/workspace/SceneProvider";
 import { GridLayer } from "./GridLayer";
 import { ObjectLayer } from "./ObjectLayer";
@@ -22,7 +22,8 @@ import {
   getObjectIdsIntersectingBox,
   getSvgPointFromEvent,
   normalizeRectFromPoints,
-  screenToWorld
+  screenToWorld,
+  worldToScreen
 } from "./canvasUtils";
 import type { CanvasSize, Point } from "./canvasTypes";
 import { snapRotationAngle } from "../manipulatives/geometryTiles/geometryTiles";
@@ -33,6 +34,14 @@ import {
   TEN_FRAME_ROWS
 } from "../manipulatives/tenFrames/tenFrames";
 import { shouldKeepAspectRatioForObjects } from "./objectAspectRatio";
+import {
+  getObjectSnapAdjustment,
+  type SnapGuide
+} from "./objectSnapping";
+import {
+  SelectionActionBar,
+  getLabelTogglePatch
+} from "../features/workspace/SelectionActionBar";
 
 const defaultCanvasSize: CanvasSize = {
   width: 960,
@@ -40,6 +49,7 @@ const defaultCanvasSize: CanvasSize = {
 };
 const MIN_OBJECT_SIZE = 24;
 const MARQUEE_DRAG_THRESHOLD = 4;
+const OBJECT_SNAP_DISTANCE = 18;
 
 type DragState =
   | {
@@ -87,7 +97,17 @@ type DragState =
 
 export type ResizeDragState = Extract<DragState, { mode: "resize" }>;
 
-export function MathCanvas() {
+interface MathCanvasProps {
+  canDeleteSelectedObjects?: boolean;
+  deleteDisabledReason?: string;
+  onDeleteBlocked?: () => void;
+}
+
+export function MathCanvas({
+  canDeleteSelectedObjects = true,
+  deleteDisabledReason,
+  onDeleteBlocked
+}: MathCanvasProps = {}) {
   const {
     scene,
     selectedObjectIds,
@@ -99,7 +119,6 @@ export function MathCanvas() {
     toggleSelectObject,
     clearSelection,
     moveObjects,
-    moveObjectsFromStart,
     transformObjects,
     toggleTenFrameCell,
     moveTenFrameToken,
@@ -107,6 +126,7 @@ export function MathCanvas() {
     duplicateSelectedObjects,
     copySelectedObjects,
     pasteObjects,
+    updateSelectedObjects,
     undo,
     redo
   } = useScene();
@@ -115,6 +135,7 @@ export function MathCanvas() {
   const dragStateRef = useRef<DragState>(null);
   const [canvasSize, setCanvasSize] = useState(defaultCanvasSize);
   const [marqueeBox, setMarqueeBox] = useState<BoundingBox | null>(null);
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
   const [tokenDragPreview, setTokenDragPreview] = useState<Point | null>(null);
 
   const selectedObjects = useMemo(
@@ -122,6 +143,28 @@ export function MathCanvas() {
       scene.objects.filter((object) => selectedObjectIds.includes(object.id)),
     [scene.objects, selectedObjectIds]
   );
+  const selectionBox = useMemo(
+    () => getSelectionBox(selectedObjects),
+    [selectedObjects]
+  );
+  const selectionActionPosition = selectionBox
+    ? worldToScreen(
+        {
+          x: selectionBox.x + selectionBox.width / 2,
+          y: selectionBox.y
+        },
+        scene.viewport
+      )
+    : null;
+
+  const deleteSelection = useCallback(() => {
+    if (!canDeleteSelectedObjects) {
+      onDeleteBlocked?.();
+      return;
+    }
+
+    deleteSelectedObjects();
+  }, [canDeleteSelectedObjects, deleteSelectedObjects, onDeleteBlocked]);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -173,7 +216,7 @@ export function MathCanvas() {
           return;
         }
         event.preventDefault();
-        deleteSelectedObjects();
+        deleteSelection();
         return;
       }
 
@@ -230,7 +273,7 @@ export function MathCanvas() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     copySelectedObjects,
-    deleteSelectedObjects,
+    deleteSelection,
     duplicateSelectedObjects,
     pasteObjects,
     redo,
@@ -266,6 +309,8 @@ export function MathCanvas() {
       setMarqueeBox(null);
     }
 
+    setSnapGuides([]);
+
     if (dragState?.mode === "ten-frame-token") {
       if (dragState.hasDragged) {
         const target = getTenFrameCellAtPoint(
@@ -300,6 +345,7 @@ export function MathCanvas() {
 
   const cancelDrag = useCallback(() => {
     setMarqueeBox(null);
+    setSnapGuides([]);
     setTokenDragPreview(null);
     dragStateRef.current = null;
   }, []);
@@ -532,10 +578,36 @@ export function MathCanvas() {
                 : null
             );
           } else if (dragState.mode === "objects") {
-            moveObjectsFromStart(dragState.objectIds, dragState.startPositions, {
+            const rawDelta = {
               x: (nextPointer.x - dragState.startPointer.x) / scene.viewport.zoom,
               y: (nextPointer.y - dragState.startPointer.y) / scene.viewport.zoom
+            };
+            const movedObjects = getDraggedObjectsFromStart(
+              scene.objects,
+              dragState.objectIds,
+              dragState.startPositions,
+              rawDelta,
+              scene.grid.snap,
+              scene.grid.size
+            );
+            const snap = getObjectSnapAdjustment({
+              movingObjects: movedObjects,
+              sceneObjects: scene.objects,
+              threshold: OBJECT_SNAP_DISTANCE
             });
+            const snappedObjects = Object.fromEntries(
+              movedObjects.map((object) => [
+                object.id,
+                {
+                  ...object,
+                  x: object.x + snap.delta.x,
+                  y: object.y + snap.delta.y
+                }
+              ])
+            );
+
+            transformObjects(dragState.objectIds, snappedObjects);
+            setSnapGuides(snap.guides);
           } else if (dragState.mode === "ten-frame-token") {
             const svg = svgRef.current;
 
@@ -614,6 +686,35 @@ export function MathCanvas() {
           onObjectPointerDown={handleObjectPointerDown}
           onTenFrameCellPointerDown={handleTenFrameCellPointerDown}
         />
+        {snapGuides.length > 0 ? (
+          <g
+            className="snap-guide-layer"
+            transform={`translate(${-scene.viewport.x * scene.viewport.zoom} ${-scene.viewport.y * scene.viewport.zoom}) scale(${scene.viewport.zoom})`}
+            aria-hidden="true"
+          >
+            {snapGuides.map((guide, index) =>
+              guide.orientation === "vertical" ? (
+                <line
+                  key={`${guide.orientation}-${guide.position}-${index}`}
+                  className="snap-guide-line"
+                  x1={guide.position}
+                  x2={guide.position}
+                  y1={guide.from}
+                  y2={guide.to}
+                />
+              ) : (
+                <line
+                  key={`${guide.orientation}-${guide.position}-${index}`}
+                  className="snap-guide-line"
+                  x1={guide.from}
+                  x2={guide.to}
+                  y1={guide.position}
+                  y2={guide.position}
+                />
+              )
+            )}
+          </g>
+        ) : null}
         {tokenDragPreview ? (
           <g
             className="ten-frame-token-preview-layer"
@@ -649,6 +750,37 @@ export function MathCanvas() {
           onHandlePointerDown={handleSelectionHandlePointerDown}
         />
       </svg>
+      {selectionActionPosition ? (
+        <SelectionActionBar
+          selectedObjects={selectedObjects}
+          style={{
+            left: selectionActionPosition.x,
+            top: selectionActionPosition.y
+          }}
+          onDuplicate={duplicateSelectedObjects}
+          canDelete={canDeleteSelectedObjects}
+          deleteDisabledReason={deleteDisabledReason}
+          onDelete={deleteSelection}
+          onToggleLocked={() =>
+            updateSelectedObjects({
+              locked: !selectedObjects.every((object) => object.locked)
+            })
+          }
+          onHide={() => updateSelectedObjects({ visible: false })}
+          onResetRotation={() => updateSelectedObjects({ rotation: 0 })}
+          onToggleLabel={() => {
+            if (selectedObjects.length !== 1) {
+              return;
+            }
+
+            const patch = getLabelTogglePatch(selectedObjects[0]);
+
+            if (patch) {
+              updateSelectedObjects(patch);
+            }
+          }}
+        />
+      ) : null}
       <ViewportControls
         zoom={scene.viewport.zoom}
         onZoomIn={() => zoomAtCanvasCenter(ZOOM_STEP)}
@@ -661,6 +793,39 @@ export function MathCanvas() {
 
 function isObjectEvent(target: EventTarget): boolean {
   return target instanceof Element && Boolean(target.closest("[data-object-id]"));
+}
+
+function getDraggedObjectsFromStart(
+  objects: SceneObject[],
+  objectIds: string[],
+  startPositions: Record<string, Point>,
+  delta: Point,
+  shouldSnap: boolean,
+  gridSize: number
+): SceneObject[] {
+  const ids = new Set(objectIds);
+
+  return objects.flatMap((object) => {
+    const startPosition = startPositions[object.id];
+
+    if (!ids.has(object.id) || object.locked || !startPosition) {
+      return [];
+    }
+
+    const nextPoint = {
+      x: startPosition.x + delta.x,
+      y: startPosition.y + delta.y
+    };
+    const position = shouldSnap ? snapToGrid(nextPoint, gridSize) : nextPoint;
+
+    return [
+      {
+        ...object,
+        x: position.x,
+        y: position.y
+      }
+    ];
+  });
 }
 
 function getTenFrameCellAtPoint(

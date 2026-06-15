@@ -37,6 +37,16 @@ describe("lesson cards", () => {
     }
   });
 
+  it("adds family guidance and reflection prompts to every lesson", () => {
+    for (const lesson of LESSON_CARDS) {
+      expect(lesson.parentGuide.length).toBeGreaterThan(8);
+      expect(lesson.reflectionPrompts.length).toBeGreaterThanOrEqual(2);
+      expect(lesson.reflectionPrompts.every((prompt) => prompt.length > 0)).toBe(
+        true
+      );
+    }
+  });
+
   it("filters lesson list by topic, grade band, and query", () => {
     expect(filterLessonCards(LESSON_CARDS, { topic: "分数" })).toHaveLength(2);
     expect(filterLessonCards(LESSON_CARDS, { gradeBand: "3-5" }).length).toBeGreaterThan(0);

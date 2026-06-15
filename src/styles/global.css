@@ -185,6 +185,17 @@ textarea:focus-visible,
   background: #eef8fb;
 }
 
+.tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+  background: #eef2f4;
+}
+
+.tool-button:disabled:hover {
+  border-color: #c9d6dd;
+  background: #eef2f4;
+}
+
 .tool-button-active {
   border-color: #2f7f95;
   color: #ffffff;
@@ -438,9 +449,38 @@ textarea:focus-visible,
   line-height: 1.5;
 }
 
+.lesson-tool-summary {
+  padding: 7px 9px;
+  border: 1px solid #d8e5d8;
+  border-radius: 6px;
+  background: #f4fbf4;
+  color: #31533c;
+  font-weight: 800;
+}
+
 .lesson-preview ol,
 .lesson-preview ul {
   padding-left: 18px;
+}
+
+.lesson-step-list {
+  display: grid;
+  gap: 6px;
+}
+
+.lesson-step-check {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 7px;
+  align-items: start;
+}
+
+.lesson-step-check input {
+  margin: 2px 0 0;
+}
+
+.lesson-step-check span {
+  min-width: 0;
 }
 
 .lesson-actions {
@@ -589,6 +629,48 @@ textarea:focus-visible,
   height: 100%;
   touch-action: none;
   user-select: none;
+}
+
+.selection-action-bar {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: min(440px, calc(100% - 24px));
+  padding: 6px;
+  border: 1px solid #cbd9df;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgb(37 54 68 / 18%);
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.selection-action-bar button {
+  min-height: 32px;
+  border: 1px solid #c9d6dd;
+  border-radius: 6px;
+  padding: 0 8px;
+  color: #243447;
+  background: #f8fafb;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.selection-action-bar button:hover {
+  border-color: #79a8b7;
+  background: #eef8fb;
+}
+
+.selection-action-bar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  background: #eef2f4;
+}
+
+.selection-action-bar button:disabled:hover {
+  border-color: #c9d6dd;
+  background: #eef2f4;
 }
 
 .canvas-background {
@@ -994,6 +1076,14 @@ textarea:focus-visible,
   stroke: #2f7f95;
   stroke-dasharray: 7 4;
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.snap-guide-line {
+  stroke: #d08700;
+  stroke-dasharray: 7 5;
+  stroke-linecap: round;
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
