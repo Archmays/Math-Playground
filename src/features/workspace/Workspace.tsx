@@ -125,6 +125,10 @@ export function Workspace() {
     setSelectedBalanceScaleLeftFromNumberTiles,
     setSelectedBalanceScaleRightFromNumberTiles,
     updateSelectedObjects,
+    bringSelectedForward,
+    sendSelectedBackward,
+    bringSelectedToFront,
+    sendSelectedToBack,
     loadScene
   } = useScene();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -622,6 +626,14 @@ export function Workspace() {
             onReflectionNoteChange={updateLessonReflection}
           />
         ) : null}
+        {selectedObjects.length > 0 ? (
+          <LayerOrderControls
+            onBringForward={bringSelectedForward}
+            onSendBackward={sendSelectedBackward}
+            onBringToFront={bringSelectedToFront}
+            onSendToBack={sendSelectedToBack}
+          />
+        ) : null}
         {selectedObject ? (
           <ObjectInspector
             object={selectedObject}
@@ -900,6 +912,54 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+function LayerOrderControls({
+  onBringForward,
+  onSendBackward,
+  onBringToFront,
+  onSendToBack
+}: {
+  onBringForward: () => void;
+  onSendBackward: () => void;
+  onBringToFront: () => void;
+  onSendToBack: () => void;
+}) {
+  return (
+    <section className="layer-order-panel" aria-label="图层排序">
+      <h3>图层</h3>
+      <div className="layer-order-grid">
+        <button
+          type="button"
+          className="property-action-button"
+          onClick={onBringForward}
+        >
+          上移一层
+        </button>
+        <button
+          type="button"
+          className="property-action-button"
+          onClick={onSendBackward}
+        >
+          下移一层
+        </button>
+        <button
+          type="button"
+          className="property-action-button"
+          onClick={onBringToFront}
+        >
+          置顶
+        </button>
+        <button
+          type="button"
+          className="property-action-button"
+          onClick={onSendToBack}
+        >
+          置底
+        </button>
+      </div>
     </section>
   );
 }

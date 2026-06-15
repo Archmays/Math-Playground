@@ -13,6 +13,10 @@ interface SelectionActionBarProps {
   onHide: () => void;
   onResetRotation: () => void;
   onToggleLabel: () => void;
+  onBringForward: () => void;
+  onSendBackward: () => void;
+  onBringToFront: () => void;
+  onSendToBack: () => void;
 }
 
 export function SelectionActionBar({
@@ -25,7 +29,11 @@ export function SelectionActionBar({
   onToggleLocked,
   onHide,
   onResetRotation,
-  onToggleLabel
+  onToggleLabel,
+  onBringForward,
+  onSendBackward,
+  onBringToFront,
+  onSendToBack
 }: SelectionActionBarProps) {
   if (selectedObjects.length === 0) {
     return null;
@@ -67,6 +75,18 @@ export function SelectionActionBar({
           {isObjectLabelVisible(selectedObjects[0]) ? "隐藏标签" : "显示标签"}
         </button>
       ) : null}
+      <button type="button" onClick={onBringForward}>
+        上移
+      </button>
+      <button type="button" onClick={onSendBackward}>
+        下移
+      </button>
+      <button type="button" onClick={onBringToFront}>
+        置顶
+      </button>
+      <button type="button" onClick={onSendToBack}>
+        置底
+      </button>
     </div>
   );
 }

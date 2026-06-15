@@ -124,6 +124,10 @@ export type WorkspaceAction =
       objectIds: string[];
       objects: Record<string, SceneObject>;
     }
+  | { type: "bringSelectedForward" }
+  | { type: "sendSelectedBackward" }
+  | { type: "bringSelectedToFront" }
+  | { type: "sendSelectedToBack" }
   | { type: "deleteSelectedObjects" }
   | { type: "duplicateSelectedObjects" }
   | { type: "copySelectedObjects" }
@@ -287,6 +291,14 @@ export function workspaceReducer(
       return updateSelectedObjects(state, action.patch);
     case "transformObjects":
       return transformObjects(state, action.objectIds, action.objects);
+    case "bringSelectedForward":
+      return bringSelectedForward(state);
+    case "sendSelectedBackward":
+      return sendSelectedBackward(state);
+    case "bringSelectedToFront":
+      return bringSelectedToFront(state);
+    case "sendSelectedToBack":
+      return sendSelectedToBack(state);
     case "deleteSelectedObjects":
       return deleteSelectedObjects(state);
     case "duplicateSelectedObjects":
@@ -916,6 +928,34 @@ export function transformObjects(
   return commitIfChanged(state, nextObjects, options.now);
 }
 
+export function bringSelectedForward(
+  state: WorkspaceState,
+  options: { now?: string } = {}
+): WorkspaceState {
+  return reorderSelectedLayerGroup(state, "forward", options.now);
+}
+
+export function sendSelectedBackward(
+  state: WorkspaceState,
+  options: { now?: string } = {}
+): WorkspaceState {
+  return reorderSelectedLayerGroup(state, "backward", options.now);
+}
+
+export function bringSelectedToFront(
+  state: WorkspaceState,
+  options: { now?: string } = {}
+): WorkspaceState {
+  return reorderSelectedLayerGroup(state, "front", options.now);
+}
+
+export function sendSelectedToBack(
+  state: WorkspaceState,
+  options: { now?: string } = {}
+): WorkspaceState {
+  return reorderSelectedLayerGroup(state, "back", options.now);
+}
+
 export function duplicateObject(
   state: WorkspaceState,
   objectId: string,
@@ -1153,6 +1193,94 @@ function commitScene(
     past: trimHistory([...state.past, cloneScene(state.scene)]),
     future: []
   };
+}
+
+type LayerMove = "forward" | "backward" | "front" | "back";
+
+type LayerItem =
+  | { kind: "group"; objects: SceneObject[] }
+  | { kind: "object"; object: SceneObject };
+
+function reorderSelectedLayerGroup(
+  state: WorkspaceState,
+  move: LayerMove,
+  now?: string
+): WorkspaceState {
+  if (state.selectedObjectIds.length === 0) {
+    return state;
+  }
+
+  const selected = new Set(state.selectedObjectIds);
+  const group = state.scene.objects.filter((object) => selected.has(object.id));
+
+  if (group.length === 0 || group.length === state.scene.objects.length) {
+    return state;
+  }
+
+  const items = buildLayerItems(state.scene.objects, selected, group);
+  const groupIndex = items.findIndex((item) => item.kind === "group");
+
+  if (groupIndex < 0) {
+    return state;
+  }
+
+  const nextItems = [...items];
+  const [groupItem] = nextItems.splice(groupIndex, 1);
+  const insertIndex = getLayerInsertIndex(move, groupIndex, items.length);
+
+  if (insertIndex === groupIndex) {
+    return state;
+  }
+
+  nextItems.splice(insertIndex, 0, groupItem);
+
+  return commitIfChanged(state, flattenLayerItems(nextItems), now);
+}
+
+function buildLayerItems(
+  objects: SceneObject[],
+  selected: Set<string>,
+  group: SceneObject[]
+): LayerItem[] {
+  const items: LayerItem[] = [];
+  let hasInsertedGroup = false;
+
+  for (const object of objects) {
+    if (selected.has(object.id)) {
+      if (!hasInsertedGroup) {
+        items.push({ kind: "group", objects: group });
+        hasInsertedGroup = true;
+      }
+      continue;
+    }
+
+    items.push({ kind: "object", object });
+  }
+
+  return items;
+}
+
+function getLayerInsertIndex(
+  move: LayerMove,
+  groupIndex: number,
+  itemCount: number
+): number {
+  switch (move) {
+    case "forward":
+      return Math.min(itemCount - 1, groupIndex + 1);
+    case "backward":
+      return Math.max(0, groupIndex - 1);
+    case "front":
+      return itemCount - 1;
+    case "back":
+      return 0;
+  }
+}
+
+function flattenLayerItems(items: LayerItem[]): SceneObject[] {
+  return items.flatMap((item) =>
+    item.kind === "group" ? item.objects : [item.object]
+  );
 }
 
 function withViewport(state: WorkspaceState, viewport: Viewport): WorkspaceState {

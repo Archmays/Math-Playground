@@ -502,6 +502,22 @@ textarea:focus-visible,
   gap: 8px;
 }
 
+.layer-order-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.layer-order-panel h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.layer-order-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .lesson-feedback,
 .lesson-hint {
   padding: 8px 10px;

@@ -56,6 +56,10 @@ interface SceneContextValue {
     objects: Record<string, SceneObject>
   ) => void;
   updateSelectedObjects: (patch: EditableObjectPatch) => void;
+  bringSelectedForward: () => void;
+  sendSelectedBackward: () => void;
+  bringSelectedToFront: () => void;
+  sendSelectedToBack: () => void;
   toggleTenFrameCell: (objectId: string, cellIndex: number) => void;
   moveTenFrameToken: (
     sourceObjectId: string,
@@ -186,6 +190,22 @@ export function SceneProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "updateSelectedObjects", patch });
   }, []);
 
+  const bringSelectedForward = useCallback(() => {
+    dispatch({ type: "bringSelectedForward" });
+  }, []);
+
+  const sendSelectedBackward = useCallback(() => {
+    dispatch({ type: "sendSelectedBackward" });
+  }, []);
+
+  const bringSelectedToFront = useCallback(() => {
+    dispatch({ type: "bringSelectedToFront" });
+  }, []);
+
+  const sendSelectedToBack = useCallback(() => {
+    dispatch({ type: "sendSelectedToBack" });
+  }, []);
+
   const toggleTenFrameCell = useCallback(
     (objectId: string, cellIndex: number) => {
       dispatch({ type: "toggleTenFrameCell", objectId, cellIndex });
@@ -280,6 +300,10 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       moveObjectsFromStart,
       transformObjects,
       updateSelectedObjects,
+      bringSelectedForward,
+      sendSelectedBackward,
+      bringSelectedToFront,
+      sendSelectedToBack,
       toggleTenFrameCell,
       moveTenFrameToken,
       deleteSelectedObjects,
@@ -322,6 +346,10 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       resetViewport,
       selectObject,
       selectObjects,
+      bringSelectedForward,
+      sendSelectedBackward,
+      bringSelectedToFront,
+      sendSelectedToBack,
       setViewport,
       state.scene,
       state.selectedObjectIds,

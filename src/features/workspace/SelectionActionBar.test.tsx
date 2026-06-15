@@ -23,6 +23,10 @@ describe("SelectionActionBar", () => {
         onHide={() => undefined}
         onResetRotation={() => undefined}
         onToggleLabel={() => undefined}
+        onBringForward={() => undefined}
+        onSendBackward={() => undefined}
+        onBringToFront={() => undefined}
+        onSendToBack={() => undefined}
       />
     );
 
@@ -30,6 +34,10 @@ describe("SelectionActionBar", () => {
     expect(html).toContain("删除");
     expect(html).toContain("锁定");
     expect(html).toContain("旋转归零");
+    expect(html).toContain("上移");
+    expect(html).toContain("下移");
+    expect(html).toContain("置顶");
+    expect(html).toContain("置底");
   });
 
   it("disables delete when the active lesson protects selected objects", () => {
@@ -51,6 +59,10 @@ describe("SelectionActionBar", () => {
         onHide={() => undefined}
         onResetRotation={() => undefined}
         onToggleLabel={() => undefined}
+        onBringForward={() => undefined}
+        onSendBackward={() => undefined}
+        onBringToFront={() => undefined}
+        onSendToBack={() => undefined}
       />
     );
 

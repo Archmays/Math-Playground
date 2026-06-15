@@ -17,6 +17,8 @@ import {
   addTangramSet,
   addSelectedGeometryRotationMarker,
   addTenFrame,
+  bringSelectedForward,
+  bringSelectedToFront,
   duplicateObject,
   pasteObjects,
   redo,
@@ -25,6 +27,8 @@ import {
   moveTenFrameToken,
   selectObject,
   selectObjects,
+  sendSelectedBackward,
+  sendSelectedToBack,
   setSelectedBalanceScaleSideFromNumberTiles,
   toggleSelectObject,
   toggleTenFrameCell,
@@ -80,6 +84,30 @@ function createEmptyState(): WorkspaceState {
     past: [],
     future: []
   };
+}
+
+function createLayerState(): WorkspaceState {
+  return {
+    ...createEmptyState(),
+    scene: createScene({
+      id: "scene-layers",
+      title: "layers",
+      now,
+      objects: ["a", "b", "c", "d", "e"].map((id, index) =>
+        createObject({
+          id,
+          type: "demo-rectangle",
+          x: index * 10,
+          y: index * 10,
+          data: { width: 80, height: 48 }
+        })
+      )
+    })
+  };
+}
+
+function objectIds(state: WorkspaceState): string[] {
+  return state.scene.objects.map((object) => object.id);
 }
 
 describe("workspace scene selection state", () => {
@@ -445,6 +473,49 @@ describe("workspace scene selection state", () => {
     const selected = toggleSelectObject(selectObject(createState(), "rect-1"), "circle-1");
 
     expect(selectObjects(selected, []).selectedObjectIds).toEqual([]);
+  });
+
+  it("moves one selected object forward and backward in layer order", () => {
+    const selectedB = selectObject(createLayerState(), "b");
+    const forward = bringSelectedForward(selectedB, { now: later });
+    const selectedC = selectObject(createLayerState(), "c");
+    const backward = sendSelectedBackward(selectedC, { now: later });
+
+    expect(objectIds(forward)).toEqual(["a", "c", "b", "d", "e"]);
+    expect(forward.selectedObjectIds).toEqual(["b"]);
+    expect(objectIds(backward)).toEqual(["a", "c", "b", "d", "e"]);
+    expect(backward.selectedObjectIds).toEqual(["c"]);
+    expect(forward.scene.updatedAt).toBe(later);
+  });
+
+  it("moves selected objects to front and back while preserving relative order", () => {
+    const selected = selectObjects(createLayerState(), ["b", "d"]);
+    const front = bringSelectedToFront(selected, { now: later });
+    const back = sendSelectedToBack(selected, { now: later });
+
+    expect(objectIds(front)).toEqual(["a", "c", "e", "b", "d"]);
+    expect(objectIds(back)).toEqual(["b", "d", "a", "c", "e"]);
+    expect(front.selectedObjectIds).toEqual(["b", "d"]);
+    expect(back.selectedObjectIds).toEqual(["b", "d"]);
+  });
+
+  it("moves multi-selection as one group by one layer step", () => {
+    const selected = selectObjects(createLayerState(), ["b", "d"]);
+    const forward = bringSelectedForward(selected, { now: later });
+    const backward = sendSelectedBackward(selected, { now: later });
+
+    expect(objectIds(forward)).toEqual(["a", "c", "b", "d", "e"]);
+    expect(objectIds(backward)).toEqual(["b", "d", "a", "c", "e"]);
+  });
+
+  it("keeps layer ordering undoable and redoable", () => {
+    const selected = selectObject(createLayerState(), "b");
+    const forward = bringSelectedForward(selected, { now: later });
+    const undone = undo(forward);
+    const redone = redo(undone);
+
+    expect(objectIds(undone)).toEqual(["a", "b", "c", "d", "e"]);
+    expect(objectIds(redone)).toEqual(["a", "c", "b", "d", "e"]);
   });
 
   it("toggleSelectObject adds and removes objects from a multi-selection", () => {

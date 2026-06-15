@@ -127,6 +127,10 @@ export function MathCanvas({
     copySelectedObjects,
     pasteObjects,
     updateSelectedObjects,
+    bringSelectedForward,
+    sendSelectedBackward,
+    bringSelectedToFront,
+    sendSelectedToBack,
     undo,
     redo
   } = useScene();
@@ -779,6 +783,10 @@ export function MathCanvas({
               updateSelectedObjects(patch);
             }
           }}
+          onBringForward={bringSelectedForward}
+          onSendBackward={sendSelectedBackward}
+          onBringToFront={bringSelectedToFront}
+          onSendToBack={sendSelectedToBack}
         />
       ) : null}
       <ViewportControls
