@@ -58,6 +58,7 @@ import {
   type TenFrameData
 } from "../manipulatives/tenFrames/tenFrames";
 import type { SceneObject, Viewport } from "./canvasTypes";
+import { getGeometryTileVertices } from "./objectGeometry";
 
 interface ObjectLayerProps {
   objects: SceneObject[];
@@ -1345,59 +1346,6 @@ function getGeometryTilePalette(colorScheme: string) {
   }
 
   return { fill: "#e9f7df", stroke: "#5d8f35" };
-}
-
-function getGeometryTileVertices(
-  shape: GeometryTileData["shape"],
-  box: { x: number; y: number; width: number; height: number }
-) {
-  const left = box.x;
-  const top = box.y;
-  const right = box.x + box.width;
-  const bottom = box.y + box.height;
-  const centerX = box.x + box.width / 2;
-  const centerY = box.y + box.height / 2;
-
-  switch (shape) {
-    case "triangle":
-      return [
-        { x: centerX, y: top },
-        { x: right, y: bottom },
-        { x: left, y: bottom }
-      ];
-    case "hexagon":
-      return Array.from({ length: 6 }, (_value, index) => {
-        const angle = (Math.PI / 180) * (60 * index);
-
-        return {
-          x: centerX + (box.width / 2) * Math.cos(angle),
-          y: centerY + (box.height / 2) * Math.sin(angle)
-        };
-      });
-    case "trapezoid":
-      return [
-        { x: left + box.width * 0.25, y: top },
-        { x: right - box.width * 0.25, y: top },
-        { x: right, y: bottom },
-        { x: left, y: bottom }
-      ];
-    case "parallelogram":
-      return [
-        { x: left + box.width * 0.24, y: top },
-        { x: right, y: top },
-        { x: right - box.width * 0.24, y: bottom },
-        { x: left, y: bottom }
-      ];
-    case "circle":
-    case "rectangle":
-    case "square":
-      return [
-        { x: left, y: top },
-        { x: right, y: top },
-        { x: right, y: bottom },
-        { x: left, y: bottom }
-      ];
-  }
 }
 
 function pointOnCircle(

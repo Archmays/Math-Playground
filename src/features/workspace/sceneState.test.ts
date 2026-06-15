@@ -35,6 +35,7 @@ import {
   toggleSelectObject,
   toggleTenFrameCell,
   undo,
+  updateObject,
   updateSelectedObjects,
   type WorkspaceState
 } from "./sceneState";
@@ -697,6 +698,20 @@ describe("workspace scene selection state", () => {
 
     expect(selectObject(hidden, "rect-1").selectedObjectIds).toEqual([]);
     expect(toggleSelectObject(hidden, "rect-1").selectedObjectIds).toEqual([]);
+  });
+
+  it("updates a hidden object by id so it can be shown without selection", () => {
+    const hidden = updateSelectedObjects(selectObject(createState(), "rect-1"), {
+      visible: false
+    });
+    const restored = updateObject(hidden, "rect-1", { visible: true }, { now: later });
+
+    expect(restored.scene.objects[0]).toMatchObject({
+      id: "rect-1",
+      visible: true
+    });
+    expect(restored.selectedObjectIds).toEqual([]);
+    expect(restored.scene.updatedAt).toBe(later);
   });
 
   it("copies and pastes selected objects with an offset", () => {

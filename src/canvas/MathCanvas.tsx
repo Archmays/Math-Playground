@@ -6,8 +6,8 @@ import {
   useState,
   type PointerEvent
 } from "react";
-import type { BoundingBox, SceneObject } from "../core/scene";
-import { getBoundingBox, snapToGrid } from "../core/geometry";
+import type { BoundingBox, SceneObject, Viewport } from "../core/scene";
+import { getBoundingBox } from "../core/geometry";
 import { useScene } from "../features/workspace/SceneProvider";
 import { GridLayer } from "./GridLayer";
 import { ObjectLayer } from "./ObjectLayer";
@@ -35,6 +35,7 @@ import {
 } from "../manipulatives/tenFrames/tenFrames";
 import { shouldKeepAspectRatioForObjects } from "./objectAspectRatio";
 import {
+  getGridSnapAdjustment,
   getObjectSnapAdjustment,
   type SnapGuide
 } from "./objectSnapping";
@@ -50,6 +51,10 @@ const defaultCanvasSize: CanvasSize = {
 const MIN_OBJECT_SIZE = 24;
 const MARQUEE_DRAG_THRESHOLD = 4;
 const OBJECT_SNAP_DISTANCE = 18;
+const ACTION_BAR_GAP = 10;
+const ACTION_BAR_MARGIN = 12;
+const ACTION_BAR_MAX_WIDTH = 440;
+const ACTION_BAR_ESTIMATED_HEIGHT = 88;
 
 type DragState =
   | {
@@ -151,14 +156,8 @@ export function MathCanvas({
     () => getSelectionBox(selectedObjects),
     [selectedObjects]
   );
-  const selectionActionPosition = selectionBox
-    ? worldToScreen(
-        {
-          x: selectionBox.x + selectionBox.width / 2,
-          y: selectionBox.y
-        },
-        scene.viewport
-      )
+  const selectionActionStyle = selectionBox
+    ? getSelectionActionBarStyle(selectionBox, scene.viewport, canvasSize)
     : null;
 
   const deleteSelection = useCallback(() => {
@@ -590,28 +589,41 @@ export function MathCanvas({
               scene.objects,
               dragState.objectIds,
               dragState.startPositions,
-              rawDelta,
-              scene.grid.snap,
-              scene.grid.size
+              rawDelta
             );
-            const snap = getObjectSnapAdjustment({
-              movingObjects: movedObjects,
+            const gridSnap = scene.grid.snap
+              ? getGridSnapAdjustment({
+                  movingObjects: movedObjects,
+                  gridSize: scene.grid.size
+                })
+              : { delta: { x: 0, y: 0 }, guides: [] };
+            const gridSnappedObjects = movedObjects.map((object) => ({
+              ...object,
+              x: object.x + gridSnap.delta.x,
+              y: object.y + gridSnap.delta.y
+            }));
+            const objectSnap = getObjectSnapAdjustment({
+              movingObjects: gridSnappedObjects,
               sceneObjects: scene.objects,
               threshold: OBJECT_SNAP_DISTANCE
             });
+            const snapDelta = {
+              x: gridSnap.delta.x + objectSnap.delta.x,
+              y: gridSnap.delta.y + objectSnap.delta.y
+            };
             const snappedObjects = Object.fromEntries(
               movedObjects.map((object) => [
                 object.id,
                 {
                   ...object,
-                  x: object.x + snap.delta.x,
-                  y: object.y + snap.delta.y
+                  x: object.x + snapDelta.x,
+                  y: object.y + snapDelta.y
                 }
               ])
             );
 
             transformObjects(dragState.objectIds, snappedObjects);
-            setSnapGuides(snap.guides);
+            setSnapGuides([...gridSnap.guides, ...objectSnap.guides]);
           } else if (dragState.mode === "ten-frame-token") {
             const svg = svgRef.current;
 
@@ -706,7 +718,7 @@ export function MathCanvas({
                   y1={guide.from}
                   y2={guide.to}
                 />
-              ) : (
+              ) : guide.orientation === "horizontal" ? (
                 <line
                   key={`${guide.orientation}-${guide.position}-${index}`}
                   className="snap-guide-line"
@@ -714,6 +726,15 @@ export function MathCanvas({
                   x2={guide.to}
                   y1={guide.position}
                   y2={guide.position}
+                />
+              ) : (
+                <line
+                  key={`${guide.orientation}-${guide.from.x}-${guide.from.y}-${index}`}
+                  className="snap-guide-line"
+                  x1={guide.from.x}
+                  x2={guide.to.x}
+                  y1={guide.from.y}
+                  y2={guide.to.y}
                 />
               )
             )}
@@ -754,13 +775,10 @@ export function MathCanvas({
           onHandlePointerDown={handleSelectionHandlePointerDown}
         />
       </svg>
-      {selectionActionPosition ? (
+      {selectionActionStyle ? (
         <SelectionActionBar
           selectedObjects={selectedObjects}
-          style={{
-            left: selectionActionPosition.x,
-            top: selectionActionPosition.y
-          }}
+          style={selectionActionStyle}
           onDuplicate={duplicateSelectedObjects}
           canDelete={canDeleteSelectedObjects}
           deleteDisabledReason={deleteDisabledReason}
@@ -803,13 +821,45 @@ function isObjectEvent(target: EventTarget): boolean {
   return target instanceof Element && Boolean(target.closest("[data-object-id]"));
 }
 
+export function getSelectionActionBarStyle(
+  selectionBox: NonNullable<ReturnType<typeof getSelectionBox>>,
+  viewport: Viewport,
+  canvasSize: CanvasSize
+) {
+  const anchor = worldToScreen(
+    {
+      x: selectionBox.x + selectionBox.width / 2,
+      y: selectionBox.y + selectionBox.height
+    },
+    viewport
+  );
+  const maxBarWidth = Math.min(
+    ACTION_BAR_MAX_WIDTH,
+    Math.max(0, canvasSize.width - ACTION_BAR_MARGIN * 2)
+  );
+  const halfBarWidth = maxBarWidth / 2;
+  const minLeft = ACTION_BAR_MARGIN + halfBarWidth;
+  const maxLeft = canvasSize.width - ACTION_BAR_MARGIN - halfBarWidth;
+  const maxTop = Math.max(
+    ACTION_BAR_MARGIN,
+    canvasSize.height - ACTION_BAR_MARGIN - ACTION_BAR_ESTIMATED_HEIGHT
+  );
+
+  return {
+    left: clamp(anchor.x, minLeft, Math.max(minLeft, maxLeft)),
+    top: clamp(anchor.y + ACTION_BAR_GAP, ACTION_BAR_MARGIN, maxTop)
+  };
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
 function getDraggedObjectsFromStart(
   objects: SceneObject[],
   objectIds: string[],
   startPositions: Record<string, Point>,
-  delta: Point,
-  shouldSnap: boolean,
-  gridSize: number
+  delta: Point
 ): SceneObject[] {
   const ids = new Set(objectIds);
 
@@ -824,13 +874,11 @@ function getDraggedObjectsFromStart(
       x: startPosition.x + delta.x,
       y: startPosition.y + delta.y
     };
-    const position = shouldSnap ? snapToGrid(nextPoint, gridSize) : nextPoint;
-
     return [
       {
         ...object,
-        x: position.x,
-        y: position.y
+        x: nextPoint.x,
+        y: nextPoint.y
       }
     ];
   });

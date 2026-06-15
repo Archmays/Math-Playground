@@ -128,6 +128,8 @@ export function Workspace() {
     addSelectedGeometryRotationMarker,
     setSelectedBalanceScaleLeftFromNumberTiles,
     setSelectedBalanceScaleRightFromNumberTiles,
+    selectObject,
+    updateObject,
     updateSelectedObjects,
     bringSelectedForward,
     sendSelectedBackward,
@@ -674,8 +676,14 @@ export function Workspace() {
             onReflectionNoteChange={updateLessonReflection}
           />
         ) : null}
-        {selectedObjects.length > 0 ? (
+        {scene.objects.length > 0 ? (
           <LayerOrderControls
+            objects={scene.objects}
+            selectedObjectIds={selectedObjectIds}
+            onSelectObject={selectObject}
+            onToggleObjectVisible={(objectId, visible) =>
+              updateObject(objectId, { visible })
+            }
             onBringForward={bringSelectedForward}
             onSendBackward={sendSelectedBackward}
             onBringToFront={bringSelectedToFront}
@@ -985,20 +993,67 @@ function HelpPanel({ onClose }: { onClose: () => void }) {
   );
 }
 
-function LayerOrderControls({
+export function LayerOrderControls({
+  objects,
+  selectedObjectIds,
+  onSelectObject,
+  onToggleObjectVisible,
   onBringForward,
   onSendBackward,
   onBringToFront,
   onSendToBack
 }: {
+  objects: SceneObject[];
+  selectedObjectIds: string[];
+  onSelectObject: (objectId: string) => void;
+  onToggleObjectVisible: (objectId: string, visible: boolean) => void;
   onBringForward: () => void;
   onSendBackward: () => void;
   onBringToFront: () => void;
   onSendToBack: () => void;
 }) {
+  const selectedIds = new Set(selectedObjectIds);
+
   return (
     <section className="layer-order-panel" aria-label="图层排序">
       <h3>图层</h3>
+      <div className="layer-object-list" aria-label="对象列表">
+        {objects.map((object) => {
+          const name = getLayerObjectName(object);
+
+          return (
+            <div
+              key={object.id}
+              className={
+                selectedIds.has(object.id)
+                  ? "layer-object-row layer-object-row-selected"
+                  : "layer-object-row"
+              }
+            >
+              <button
+                type="button"
+                className="layer-object-select"
+                disabled={!object.visible}
+                onClick={() => onSelectObject(object.id)}
+              >
+                <span>{name}</span>
+                <small>{object.type}</small>
+              </button>
+              <label className="layer-object-visibility">
+                <input
+                  type="checkbox"
+                  checked={object.visible}
+                  aria-label={`显示 ${name}`}
+                  onChange={(event) =>
+                    onToggleObjectVisible(object.id, event.target.checked)
+                  }
+                />
+                显示
+              </label>
+            </div>
+          );
+        })}
+      </div>
       <div className="layer-order-grid">
         <button
           type="button"
@@ -1031,6 +1086,10 @@ function LayerOrderControls({
       </div>
     </section>
   );
+}
+
+function getLayerObjectName(object: SceneObject): string {
+  return object.label || object.type;
 }
 
 function ObjectInspector({

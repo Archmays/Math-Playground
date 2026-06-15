@@ -128,6 +128,7 @@ export type WorkspaceAction =
       objectIds: string[];
       objects: Record<string, SceneObject>;
     }
+  | { type: "updateObject"; objectId: string; patch: EditableObjectPatch }
   | { type: "bringSelectedForward" }
   | { type: "sendSelectedBackward" }
   | { type: "bringSelectedToFront" }
@@ -299,6 +300,8 @@ export function workspaceReducer(
       return updateSelectedObjects(state, action.patch);
     case "transformObjects":
       return transformObjects(state, action.objectIds, action.objects);
+    case "updateObject":
+      return updateObject(state, action.objectId, action.patch);
     case "bringSelectedForward":
       return bringSelectedForward(state);
     case "sendSelectedBackward":
@@ -907,6 +910,43 @@ export function updateSelectedObjects(
       ? state.selectedObjectIds.filter((id) =>
           nextObjects.some((object) => object.id === id && object.visible)
         )
+      : state.selectedObjectIds;
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: nextObjects
+    },
+    nextSelectedIds
+  );
+}
+
+export function updateObject(
+  state: WorkspaceState,
+  objectId: string,
+  patch: EditableObjectPatch,
+  options: { now?: string } = {}
+): WorkspaceState {
+  const objectExists = state.scene.objects.some((object) => object.id === objectId);
+
+  if (!objectExists) {
+    return state;
+  }
+
+  const nextObjects = state.scene.objects.map((object) =>
+    object.id === objectId
+      ? {
+          ...object,
+          ...patch,
+          data: patch.data ? { ...object.data, ...patch.data } : object.data
+        }
+      : object
+  );
+  const nextSelectedIds =
+    patch.visible === false
+      ? state.selectedObjectIds.filter((id) => id !== objectId)
       : state.selectedObjectIds;
 
   return commitScene(

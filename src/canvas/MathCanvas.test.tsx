@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createGeometryTile } from "../manipulatives/geometryTiles/geometryTiles";
 import {
+  getSelectionActionBarStyle,
   resizeObjectsFromDrag,
   shouldKeepAspectRatioForResize,
   type ResizeDragState
@@ -29,5 +30,18 @@ describe("MathCanvas resize constraints", () => {
 
     expect(shouldKeepAspectRatioForResize([square], false)).toBe(true);
     expect(resized["square-1"].scaleX).toBeCloseTo(resized["square-1"].scaleY);
+  });
+});
+
+describe("MathCanvas selection action bar placement", () => {
+  it("places the action bar below the selected object and clamps it inside the canvas", () => {
+    const style = getSelectionActionBarStyle(
+      { x: 220, y: 80, width: 80, height: 80 },
+      { x: 0, y: 0, zoom: 1 },
+      { width: 300, height: 400 }
+    );
+
+    expect(style.top).toBeGreaterThan(160);
+    expect(style.left).toBe(150);
   });
 });

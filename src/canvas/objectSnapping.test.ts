@@ -1,8 +1,38 @@
 import { describe, expect, it } from "vitest";
 import { createObject } from "../core/scene";
-import { getObjectSnapAdjustment } from "./objectSnapping";
+import { createGeometryTile } from "../manipulatives/geometryTiles/geometryTiles";
+import {
+  getGridSnapAdjustment,
+  getObjectSnapAdjustment
+} from "./objectSnapping";
 
 describe("object snapping", () => {
+  it("snaps geometry tile outline points to nearby grid coordinates", () => {
+    const triangle = createGeometryTile({
+      id: "triangle",
+      shape: "triangle",
+      x: 14,
+      y: 40,
+      width: 96,
+      height: 83,
+      showLabel: false
+    });
+
+    const result = getGridSnapAdjustment({
+      movingObjects: [triangle],
+      gridSize: 20
+    });
+
+    expect(result.delta.x).toBeCloseTo(-2);
+    expect(result.delta.y).toBe(0);
+    expect(result.guides).toContainEqual({
+      orientation: "vertical",
+      position: 60,
+      from: 40,
+      to: 123
+    });
+  });
+
   it("snaps a moving object edge to a nearby visible unlocked object edge", () => {
     const moving = createObject({
       id: "moving",
@@ -62,6 +92,100 @@ describe("object snapping", () => {
       position: 127,
       from: 32,
       to: 104
+    });
+  });
+
+  it("snaps a triangle vertex to a nearby object edge instead of its bounding box", () => {
+    const moving = createGeometryTile({
+      id: "moving-triangle",
+      shape: "triangle",
+      x: 80,
+      y: 120,
+      width: 80,
+      height: 69,
+      showLabel: false
+    });
+    const target = createObject({
+      id: "target",
+      type: "demo-rectangle",
+      x: 124,
+      y: 96,
+      data: { width: 72, height: 160 }
+    });
+
+    const result = getObjectSnapAdjustment({
+      movingObjects: [moving],
+      sceneObjects: [moving, target],
+      threshold: 8
+    });
+
+    expect(result.delta.x).toBeCloseTo(4);
+    expect(result.delta.y).toBe(0);
+  });
+
+  it("uses rotated outline points when snapping a diamond-shaped square", () => {
+    const moving = createGeometryTile({
+      id: "moving-square",
+      shape: "square",
+      x: 0,
+      y: 0,
+      width: 80,
+      height: 80,
+      showLabel: false
+    });
+    const rotatedMoving = {
+      ...moving,
+      rotation: 45
+    };
+    const target = createObject({
+      id: "target",
+      type: "demo-rectangle",
+      x: 100,
+      y: 0,
+      data: { width: 72, height: 96 }
+    });
+
+    const result = getObjectSnapAdjustment({
+      movingObjects: [rotatedMoving],
+      sceneObjects: [rotatedMoving, target],
+      threshold: 8
+    });
+
+    expect(result.delta.x).toBeCloseTo(100 - (40 + Math.SQRT2 * 40));
+    expect(result.delta.y).toBe(0);
+  });
+
+  it("snaps parallel sloped geometry edges to each other", () => {
+    const moving = createGeometryTile({
+      id: "moving-parallelogram",
+      shape: "parallelogram",
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 60,
+      showLabel: false
+    });
+    const target = createGeometryTile({
+      id: "target-parallelogram",
+      shape: "parallelogram",
+      x: 90,
+      y: 0,
+      width: 100,
+      height: 60,
+      showLabel: false
+    });
+
+    const result = getObjectSnapAdjustment({
+      movingObjects: [moving],
+      sceneObjects: [moving, target],
+      threshold: 18
+    });
+
+    expect(Math.hypot(result.delta.x, result.delta.y)).toBeGreaterThan(0);
+    expect(result.guides).toContainEqual({
+      orientation: "segment",
+      from: { x: 90, y: 60 },
+      to: { x: 114, y: 0 }
     });
   });
 

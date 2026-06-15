@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { createObject } from "../../core/scene";
 import { LESSON_CARDS } from "../lessons/lessons";
-import { LessonPreview } from "./Workspace";
+import { LayerOrderControls, LessonPreview } from "./Workspace";
 
 describe("LessonPreview", () => {
   it("renders explanation prompts and the explanation label action for active lessons", () => {
@@ -34,5 +35,33 @@ describe("LessonPreview", () => {
     expect(html).toContain("添加解释标签");
     expect(html).toContain("本次复盘");
     expect(html).toContain("孩子能说出还差 3。");
+  });
+});
+
+describe("LayerOrderControls", () => {
+  it("renders visibility controls for hidden objects", () => {
+    const hidden = createObject({
+      id: "hidden-rect",
+      type: "demo-rectangle",
+      label: "Hidden rectangle",
+      visible: false,
+      data: { width: 80, height: 48 }
+    });
+    const html = renderToStaticMarkup(
+      <LayerOrderControls
+        objects={[hidden]}
+        selectedObjectIds={[]}
+        onSelectObject={() => undefined}
+        onToggleObjectVisible={() => undefined}
+        onBringForward={() => undefined}
+        onSendBackward={() => undefined}
+        onBringToFront={() => undefined}
+        onSendToBack={() => undefined}
+      />
+    );
+
+    expect(html).toContain("Hidden rectangle");
+    expect(html).toContain("type=\"checkbox\"");
+    expect(html).toContain("aria-label=\"显示 Hidden rectangle\"");
   });
 });

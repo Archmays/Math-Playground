@@ -58,6 +58,7 @@ interface SceneContextValue {
     objects: Record<string, SceneObject>
   ) => void;
   updateSelectedObjects: (patch: EditableObjectPatch) => void;
+  updateObject: (objectId: string, patch: EditableObjectPatch) => void;
   bringSelectedForward: () => void;
   sendSelectedBackward: () => void;
   bringSelectedToFront: () => void;
@@ -200,6 +201,13 @@ export function SceneProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "updateSelectedObjects", patch });
   }, []);
 
+  const updateObject = useCallback(
+    (objectId: string, patch: EditableObjectPatch) => {
+      dispatch({ type: "updateObject", objectId, patch });
+    },
+    []
+  );
+
   const bringSelectedForward = useCallback(() => {
     dispatch({ type: "bringSelectedForward" });
   }, []);
@@ -312,6 +320,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       moveObjectsFromStart,
       transformObjects,
       updateSelectedObjects,
+      updateObject,
       bringSelectedForward,
       sendSelectedBackward,
       bringSelectedToFront,
@@ -372,6 +381,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       toggleTenFrameCell,
       undo,
       updateSelectedObjects,
+      updateObject,
       zoomAt
     ]
   );
