@@ -36,8 +36,11 @@ import {
 import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
 import {
   createTenFrame,
+  getFilledCellPositions,
   isTenFrameObject,
-  toggleCell
+  TEN_FRAME_CELL_COUNT,
+  toggleCell,
+  type TenFrameData
 } from "../../manipulatives/tenFrames/tenFrames";
 
 export type DemoObjectType = "demo-rectangle" | "demo-circle" | "demo-text";
@@ -91,6 +94,13 @@ export type WorkspaceAction =
   | { type: "addSelectedGeometryRotationMarker" }
   | { type: "setSelectedBalanceScaleSideFromNumberTiles"; side: "left" | "right" }
   | { type: "toggleTenFrameCell"; objectId: string; cellIndex: number }
+  | {
+      type: "moveTenFrameToken";
+      sourceObjectId: string;
+      sourceCellIndex: number;
+      targetObjectId: string;
+      targetCellIndex: number;
+    }
   | { type: "selectObject"; objectId: string }
   | { type: "selectObjects"; objectIds: string[] }
   | { type: "toggleSelectObject"; objectId: string }
@@ -242,6 +252,14 @@ export function workspaceReducer(
       return setSelectedBalanceScaleSideFromNumberTiles(state, action.side);
     case "toggleTenFrameCell":
       return toggleTenFrameCell(state, action.objectId, action.cellIndex);
+    case "moveTenFrameToken":
+      return moveTenFrameToken(
+        state,
+        action.sourceObjectId,
+        action.sourceCellIndex,
+        action.targetObjectId,
+        action.targetCellIndex
+      );
     case "selectObject":
       return selectObject(state, action.objectId);
     case "selectObjects":
@@ -618,6 +636,94 @@ export function toggleTenFrameCell(
   );
 
   return commitIfChanged(state, nextObjects, options.now);
+}
+
+export function moveTenFrameToken(
+  state: WorkspaceState,
+  sourceObjectId: string,
+  sourceCellIndex: number,
+  targetObjectId: string,
+  targetCellIndex: number,
+  options: { now?: string } = {}
+): WorkspaceState {
+  if (sourceObjectId === targetObjectId) {
+    return state;
+  }
+
+  const source = state.scene.objects.find(
+    (object) => object.id === sourceObjectId
+  );
+  const target = state.scene.objects.find(
+    (object) => object.id === targetObjectId
+  );
+
+  if (
+    !source ||
+    !target ||
+    !source.visible ||
+    !target.visible ||
+    source.locked ||
+    target.locked ||
+    !isTenFrameObject(source) ||
+    !isTenFrameObject(target)
+  ) {
+    return state;
+  }
+
+  const sourcePositions = getFilledCellPositions(source.data);
+  const targetPositions = getFilledCellPositions(target.data);
+
+  if (
+    !sourcePositions.includes(sourceCellIndex) ||
+    targetPositions.includes(targetCellIndex) ||
+    targetPositions.length >= TEN_FRAME_CELL_COUNT ||
+    !isValidTenFrameCellIndex(targetCellIndex)
+  ) {
+    return state;
+  }
+
+  const nextSourcePositions = sourcePositions.filter(
+    (cellIndex) => cellIndex !== sourceCellIndex
+  );
+  const nextTargetPositions = [...targetPositions, targetCellIndex].sort(
+    (a, b) => a - b
+  );
+  const nextObjects = state.scene.objects.map((object) => {
+    if (object.id === source.id && isTenFrameObject(object)) {
+      return setManualTenFramePositions(object, nextSourcePositions);
+    }
+
+    if (object.id === target.id && isTenFrameObject(object)) {
+      return setManualTenFramePositions(object, nextTargetPositions);
+    }
+
+    return object;
+  });
+
+  return commitIfChanged(state, nextObjects, options.now);
+}
+
+function setManualTenFramePositions(
+  object: SceneObject<TenFrameData>,
+  tokenPositions: number[]
+): SceneObject<TenFrameData> {
+  return {
+    ...object,
+    data: {
+      ...object.data,
+      fillMode: "manual",
+      filledCount: tokenPositions.length,
+      tokenPositions
+    }
+  };
+}
+
+function isValidTenFrameCellIndex(value: number): boolean {
+  return (
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < TEN_FRAME_CELL_COUNT
+  );
 }
 
 export function selectObject(

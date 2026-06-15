@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createObject, createScene } from "../../core/scene";
 import { createBalanceScale } from "../../manipulatives/balanceScale/balanceScale";
 import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
+import { createTenFrame } from "../../manipulatives/tenFrames/tenFrames";
 import {
   addAlgebraTile,
   addBalanceScale,
@@ -21,6 +22,7 @@ import {
   redo,
   moveObject,
   moveObjectsFromStart,
+  moveTenFrameToken,
   selectObject,
   selectObjects,
   setSelectedBalanceScaleSideFromNumberTiles,
@@ -171,6 +173,86 @@ describe("workspace scene selection state", () => {
       }
     });
     expect(state.selectedObjectIds).toEqual(["geometry-hexagon"]);
+  });
+
+  it("moves tokens between two ten frames", () => {
+    const state: WorkspaceState = {
+      ...createEmptyState(),
+      scene: createScene({
+        id: "scene-ten-frame-transfer",
+        title: "ten frame transfer",
+        now,
+        objects: [
+          createTenFrame({ id: "left-frame", filledCount: 8 }),
+          createTenFrame({ id: "right-frame", filledCount: 5 })
+        ]
+      })
+    };
+
+    const firstMove = moveTenFrameToken(state, "right-frame", 0, "left-frame", 8, {
+      now: later
+    });
+    const secondMove = moveTenFrameToken(
+      firstMove,
+      "right-frame",
+      1,
+      "left-frame",
+      9,
+      { now: later }
+    );
+
+    expect(firstMove.scene.objects[0]).toMatchObject({
+      data: {
+        fillMode: "manual",
+        filledCount: 9,
+        tokenPositions: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+      }
+    });
+    expect(firstMove.scene.objects[1]).toMatchObject({
+      data: {
+        fillMode: "manual",
+        filledCount: 4,
+        tokenPositions: [1, 2, 3, 4]
+      }
+    });
+    expect(secondMove.scene.objects[0]).toMatchObject({
+      data: {
+        filledCount: 10,
+        tokenPositions: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      }
+    });
+    expect(secondMove.scene.objects[1]).toMatchObject({
+      data: {
+        filledCount: 3,
+        tokenPositions: [2, 3, 4]
+      }
+    });
+  });
+
+  it("does not move ten frame tokens when the transfer is invalid", () => {
+    const state: WorkspaceState = {
+      ...createEmptyState(),
+      scene: createScene({
+        id: "scene-invalid-ten-frame-transfer",
+        title: "invalid ten frame transfer",
+        now,
+        objects: [
+          createTenFrame({ id: "left-frame", filledCount: 8 }),
+          createTenFrame({ id: "right-frame", filledCount: 5 }),
+          createNumberTile({ id: "number-1", value: 1 }),
+          {
+            ...createTenFrame({ id: "locked-frame", filledCount: 0 }),
+            locked: true
+          }
+        ]
+      })
+    };
+
+    expect(moveTenFrameToken(state, "right-frame", 6, "left-frame", 8)).toBe(state);
+    expect(moveTenFrameToken(state, "right-frame", 0, "left-frame", 7)).toBe(state);
+    expect(moveTenFrameToken(state, "right-frame", 0, "right-frame", 6)).toBe(state);
+    expect(moveTenFrameToken(state, "right-frame", 0, "number-1", 0)).toBe(state);
+    expect(moveTenFrameToken(state, "right-frame", 0, "locked-frame", 0)).toBe(state);
   });
 
   it("adds a seven-piece tangram set with distinct colors", () => {

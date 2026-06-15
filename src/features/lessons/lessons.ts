@@ -114,17 +114,17 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "进位",
     description: "用十格阵表示先凑十，再加剩下的数。",
     instructions: [
-      "观察 8 点十格阵。",
-      "把 5 拆成 2 和 3。",
-      "先用 2 补满十格阵，再把剩下的 3 加上。"
+      "观察左边 8 点十格阵和右边 5 点十格阵。",
+      "先把右边的 2 个点拖到左边空格里，补满十格阵。",
+      "再说明右边剩下 3 个点，所以 8 + 5 = 10 + 3。"
     ],
     starterScene: createScene({
       id: "lesson-regroup-8-5",
       title: "进位：8 + 5",
       now: NOW,
       objects: [
-        createTenFrame({ id: "lesson-ten-frame-10", filledCount: 10, x: 96, y: 112 }),
-        createNumberTile({ id: "lesson-number-3", value: 3, x: 360, y: 128 })
+        createTenFrame({ id: "lesson-ten-frame-8", filledCount: 8, x: 96, y: 112 }),
+        createTenFrame({ id: "lesson-ten-frame-5", filledCount: 5, x: 360, y: 112 })
       ]
     }),
     successCriteria: ["能解释 8 + 5 = 10 + 3", "能得到结果 13"],

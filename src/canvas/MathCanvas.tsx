@@ -7,6 +7,7 @@ import {
   type PointerEvent
 } from "react";
 import type { BoundingBox, SceneObject } from "../core/scene";
+import { getBoundingBox } from "../core/geometry";
 import { useScene } from "../features/workspace/SceneProvider";
 import { GridLayer } from "./GridLayer";
 import { ObjectLayer } from "./ObjectLayer";
@@ -25,6 +26,12 @@ import {
 } from "./canvasUtils";
 import type { CanvasSize, Point } from "./canvasTypes";
 import { snapRotationAngle } from "../manipulatives/geometryTiles/geometryTiles";
+import {
+  getFilledCellPositions,
+  isTenFrameObject,
+  TEN_FRAME_COLUMNS,
+  TEN_FRAME_ROWS
+} from "../manipulatives/tenFrames/tenFrames";
 import { shouldKeepAspectRatioForObjects } from "./objectAspectRatio";
 
 const defaultCanvasSize: CanvasSize = {
@@ -52,6 +59,14 @@ type DragState =
       startPointer: Point;
       startPositions: Record<string, Point>;
       lastPointer: Point;
+    }
+  | {
+      mode: "ten-frame-token";
+      sourceObjectId: string;
+      sourceCellIndex: number;
+      startScreenPointer: Point;
+      currentPointer: Point;
+      hasDragged: boolean;
     }
   | {
       mode: "resize";
@@ -87,6 +102,7 @@ export function MathCanvas() {
     moveObjectsFromStart,
     transformObjects,
     toggleTenFrameCell,
+    moveTenFrameToken,
     deleteSelectedObjects,
     duplicateSelectedObjects,
     copySelectedObjects,
@@ -99,6 +115,7 @@ export function MathCanvas() {
   const dragStateRef = useRef<DragState>(null);
   const [canvasSize, setCanvasSize] = useState(defaultCanvasSize);
   const [marqueeBox, setMarqueeBox] = useState<BoundingBox | null>(null);
+  const [tokenDragPreview, setTokenDragPreview] = useState<Point | null>(null);
 
   const selectedObjects = useMemo(
     () =>
@@ -249,11 +266,41 @@ export function MathCanvas() {
       setMarqueeBox(null);
     }
 
+    if (dragState?.mode === "ten-frame-token") {
+      if (dragState.hasDragged) {
+        const target = getTenFrameCellAtPoint(
+          scene.objects,
+          dragState.currentPointer,
+          dragState.sourceObjectId
+        );
+
+        if (target) {
+          moveTenFrameToken(
+            dragState.sourceObjectId,
+            dragState.sourceCellIndex,
+            target.objectId,
+            target.cellIndex
+          );
+        }
+      } else {
+        toggleTenFrameCell(dragState.sourceObjectId, dragState.sourceCellIndex);
+      }
+
+      setTokenDragPreview(null);
+    }
+
     dragStateRef.current = null;
-  }, [clearSelection, scene.objects, selectObjects]);
+  }, [
+    clearSelection,
+    moveTenFrameToken,
+    scene.objects,
+    selectObjects,
+    toggleTenFrameCell
+  ]);
 
   const cancelDrag = useCallback(() => {
     setMarqueeBox(null);
+    setTokenDragPreview(null);
     dragStateRef.current = null;
   }, []);
 
@@ -323,7 +370,42 @@ export function MathCanvas() {
 
     event.stopPropagation();
     selectObject(objectId);
-    toggleTenFrameCell(objectId, cellIndex);
+
+    const object = scene.objects.find((item) => item.id === objectId);
+
+    if (!object || !isTenFrameObject(object)) {
+      return;
+    }
+
+    const isFilled = getFilledCellPositions(object.data).includes(cellIndex);
+
+    if (!isFilled) {
+      toggleTenFrameCell(objectId, cellIndex);
+      return;
+    }
+
+    const svg = svgRef.current;
+
+    if (!svg) {
+      toggleTenFrameCell(objectId, cellIndex);
+      return;
+    }
+
+    dragStateRef.current = {
+      mode: "ten-frame-token",
+      sourceObjectId: objectId,
+      sourceCellIndex: cellIndex,
+      startScreenPointer: {
+        x: event.clientX,
+        y: event.clientY
+      },
+      currentPointer: screenToWorld(
+        getSvgPointFromEvent(event.nativeEvent, svg),
+        scene.viewport
+      ),
+      hasDragged: false
+    };
+    svg.setPointerCapture(event.pointerId);
   };
 
   const handleSelectionHandlePointerDown = (
@@ -454,6 +536,30 @@ export function MathCanvas() {
               x: (nextPointer.x - dragState.startPointer.x) / scene.viewport.zoom,
               y: (nextPointer.y - dragState.startPointer.y) / scene.viewport.zoom
             });
+          } else if (dragState.mode === "ten-frame-token") {
+            const svg = svgRef.current;
+
+            if (!svg) {
+              return;
+            }
+
+            const worldPointer = screenToWorld(
+              getSvgPointFromEvent(event.nativeEvent, svg),
+              scene.viewport
+            );
+            const screenDistance = Math.hypot(
+              nextPointer.x - dragState.startScreenPointer.x,
+              nextPointer.y - dragState.startScreenPointer.y
+            );
+            const hasDragged =
+              dragState.hasDragged || screenDistance >= MARQUEE_DRAG_THRESHOLD;
+
+            dragStateRef.current = {
+              ...dragState,
+              currentPointer: worldPointer,
+              hasDragged
+            };
+            setTokenDragPreview(hasDragged ? worldPointer : null);
           } else {
             const svg = svgRef.current;
 
@@ -508,6 +614,20 @@ export function MathCanvas() {
           onObjectPointerDown={handleObjectPointerDown}
           onTenFrameCellPointerDown={handleTenFrameCellPointerDown}
         />
+        {tokenDragPreview ? (
+          <g
+            className="ten-frame-token-preview-layer"
+            transform={`translate(${-scene.viewport.x * scene.viewport.zoom} ${-scene.viewport.y * scene.viewport.zoom}) scale(${scene.viewport.zoom})`}
+            aria-hidden="true"
+          >
+            <circle
+              className="ten-frame-token ten-frame-token-drag-preview"
+              cx={tokenDragPreview.x}
+              cy={tokenDragPreview.y}
+              r={12}
+            />
+          </g>
+        ) : null}
         {marqueeBox ? (
           <g
             className="marquee-layer"
@@ -541,6 +661,54 @@ export function MathCanvas() {
 
 function isObjectEvent(target: EventTarget): boolean {
   return target instanceof Element && Boolean(target.closest("[data-object-id]"));
+}
+
+function getTenFrameCellAtPoint(
+  objects: SceneObject[],
+  point: Point,
+  excludedObjectId: string
+): { objectId: string; cellIndex: number } | null {
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    const object = objects[index];
+
+    if (
+      object.id === excludedObjectId ||
+      !object.visible ||
+      object.locked ||
+      !isTenFrameObject(object)
+    ) {
+      continue;
+    }
+
+    const box = getBoundingBox(object);
+
+    if (
+      point.x < box.x ||
+      point.x > box.x + box.width ||
+      point.y < box.y ||
+      point.y > box.y + box.height
+    ) {
+      continue;
+    }
+
+    const cellWidth = box.width / TEN_FRAME_COLUMNS;
+    const cellHeight = box.height / TEN_FRAME_ROWS;
+    const column = Math.min(
+      TEN_FRAME_COLUMNS - 1,
+      Math.max(0, Math.floor((point.x - box.x) / cellWidth))
+    );
+    const row = Math.min(
+      TEN_FRAME_ROWS - 1,
+      Math.max(0, Math.floor((point.y - box.y) / cellHeight))
+    );
+
+    return {
+      objectId: object.id,
+      cellIndex: row * TEN_FRAME_COLUMNS + column
+    };
+  }
+
+  return null;
 }
 
 export function resizeObjectsFromDrag(

@@ -53,6 +53,12 @@ interface SceneContextValue {
   ) => void;
   updateSelectedObjects: (patch: EditableObjectPatch) => void;
   toggleTenFrameCell: (objectId: string, cellIndex: number) => void;
+  moveTenFrameToken: (
+    sourceObjectId: string,
+    sourceCellIndex: number,
+    targetObjectId: string,
+    targetCellIndex: number
+  ) => void;
   deleteSelectedObjects: () => void;
   duplicateSelectedObjects: () => void;
   copySelectedObjects: () => void;
@@ -177,6 +183,24 @@ export function SceneProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const moveTenFrameToken = useCallback(
+    (
+      sourceObjectId: string,
+      sourceCellIndex: number,
+      targetObjectId: string,
+      targetCellIndex: number
+    ) => {
+      dispatch({
+        type: "moveTenFrameToken",
+        sourceObjectId,
+        sourceCellIndex,
+        targetObjectId,
+        targetCellIndex
+      });
+    },
+    []
+  );
+
   const deleteSelectedObjects = useCallback(() => {
     dispatch({ type: "deleteSelectedObjects" });
   }, []);
@@ -247,6 +271,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       transformObjects,
       updateSelectedObjects,
       toggleTenFrameCell,
+      moveTenFrameToken,
       deleteSelectedObjects,
       duplicateSelectedObjects,
       copySelectedObjects,
@@ -280,6 +305,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       loadScene,
       moveObjects,
       moveObjectsFromStart,
+      moveTenFrameToken,
       pan,
       pasteObjects,
       redo,

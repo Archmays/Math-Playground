@@ -720,6 +720,15 @@ textarea:focus-visible,
   vector-effect: non-scaling-stroke;
 }
 
+.ten-frame-token-preview-layer {
+  pointer-events: none;
+}
+
+.ten-frame-token-drag-preview {
+  fill: rgb(79 179 166 / 55%);
+  stroke: #256f83;
+}
+
 .fraction-bar-background {
   fill: #ffffff;
   stroke: none;

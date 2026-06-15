@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createScene } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 import { createNumberTile } from "../../manipulatives/numberTiles/numberTiles";
+import { isTenFrameObject } from "../../manipulatives/tenFrames/tenFrames";
 import {
   LESSON_CARDS,
   checkLessonCard,
@@ -99,7 +100,38 @@ describe("lesson cards", () => {
       return;
     }
 
-    const result = checkLessonCard(lesson, lesson.starterScene);
+    const tenFrames = lesson.starterScene.objects.filter(isTenFrameObject);
+    expect(tenFrames.map((object) => object.data.filledCount)).toEqual([8, 5]);
+    expect(lesson.starterScene.objects).toHaveLength(2);
+
+    const initialResult = checkLessonCard(lesson, lesson.starterScene);
+    expect(initialResult.isCorrect).toBe(false);
+
+    const completedScene = {
+      ...lesson.starterScene,
+      objects: tenFrames.map((object) =>
+        object.id === "lesson-ten-frame-8"
+          ? {
+              ...object,
+              data: {
+                ...object.data,
+                fillMode: "manual" as const,
+                filledCount: 10,
+                tokenPositions: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+              }
+            }
+          : {
+              ...object,
+              data: {
+                ...object.data,
+                fillMode: "manual" as const,
+                filledCount: 3,
+                tokenPositions: [2, 3, 4]
+              }
+            }
+      )
+    };
+    const result = checkLessonCard(lesson, completedScene);
 
     expect(result.isCorrect).toBe(true);
   });
