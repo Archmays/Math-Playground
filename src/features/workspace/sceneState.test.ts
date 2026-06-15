@@ -97,6 +97,23 @@ describe("workspace scene selection state", () => {
     expect(second.scene.objects.at(-1)).toMatchObject({ id: "demo-2", x: 256 });
   });
 
+  it("adds a demo text object with provided explanation copy", () => {
+    const state = addDemoObject(createEmptyState(), "demo-text", {
+      id: "explain-1",
+      now: later,
+      text: "我发现还差 3 个。"
+    });
+
+    expect(state.scene.objects[0]).toMatchObject({
+      id: "explain-1",
+      type: "demo-text",
+      data: {
+        text: "我发现还差 3 个。"
+      }
+    });
+    expect(state.selectedObjectIds).toEqual(["explain-1"]);
+  });
+
   it("adds and toggles a ten frame cell", () => {
     const added = addTenFrame(createEmptyState(), 5, {
       id: "frame-1",

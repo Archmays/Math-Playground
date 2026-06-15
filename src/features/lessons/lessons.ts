@@ -69,6 +69,8 @@ export interface LessonCard {
   topic: string;
   description: string;
   parentGuide: string;
+  explanationPrompts?: string[];
+  starterLabelText?: string;
   constraints?: LessonConstraints;
   instructions: string[];
   starterScene: Scene;
@@ -100,6 +102,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "凑十",
     description: "用十格阵把 7 补到 10，理解 7 + 3 的凑十结构。",
     parentGuide: "让孩子先观察空格，不急着说算式。重点听孩子能不能说出“还差几个”。",
+    explanationPrompts: ["说说你怎么一眼看出 7 还差 3。"],
+    starterLabelText: "我发现 7 还差 3 到 10。",
     constraints: {
       allowedToolCategories: ["numbers"],
       allowDeleteStarterObjects: false
@@ -135,6 +139,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "进位",
     description: "用十格阵表示先凑十，再加剩下的数。",
     parentGuide: "让孩子动手移动点子，再说“先凑十，剩下多少”。不要先要求背进位口诀。",
+    explanationPrompts: ["说说 5 被拆成了哪两部分。"],
+    starterLabelText: "我先补 2 个到 10，还剩 3 个。",
     constraints: {
       allowedToolCategories: ["numbers"],
       allowDeleteStarterObjects: false
@@ -170,6 +176,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "分数",
     description: "比较两条长度相同的分数条，观察 1/2 和 2/4 的覆盖长度。",
     parentGuide: "引导孩子只比较填色长度，先不急着讲通分规则。",
+    explanationPrompts: ["说说为什么 1/2 和 2/4 的填色长度一样。"],
+    starterLabelText: "两条填色一样长，所以 1/2 = 2/4。",
     constraints: {
       allowedToolCategories: ["common", "fractions"],
       allowDeleteStarterObjects: false
@@ -205,6 +213,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "分数",
     description: "用等长分数条比较 3/4 和 2/3 的大小。",
     parentGuide: "让孩子把左端对齐后看右端，避免只凭分母或分子大小猜答案。",
+    explanationPrompts: ["说说你比较的是哪一段长度。"],
+    starterLabelText: "左端对齐后，3/4 的填色更长。",
     constraints: {
       allowedToolCategories: ["common", "fractions"],
       allowDeleteStarterObjects: false
@@ -240,6 +250,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "面积",
     description: "用 12 个小正方形拼出 3 行 4 列，理解乘法和面积。",
     parentGuide: "让孩子先整理成整齐阵列，再把“几个一组”和乘法联系起来。",
+    explanationPrompts: ["说说 3 行 4 列为什么是 12 个单位。"],
+    starterLabelText: "每行 4 个，有 3 行，一共 12 个。",
     constraints: {
       allowedToolCategories: ["common", "geometry"],
       allowDeleteStarterObjects: false
@@ -282,6 +294,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "角度",
     description: "观察三个角度标注，比较锐角、直角和钝角。",
     parentGuide: "先让孩子按大小排序，再用 90° 作为参照说出角的名称。",
+    explanationPrompts: ["说说你怎么用 90° 判断锐角和钝角。"],
+    starterLabelText: "小于 90° 是锐角，大于 90° 是钝角。",
     constraints: {
       allowedToolCategories: ["common", "geometry"],
       allowDeleteStarterObjects: false
@@ -318,6 +332,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "等式",
     description: "用天平表示 3 + 4 和 7 两边平衡。",
     parentGuide: "把天平当作“左右一样多”的图像，不要先把等号解释成做题符号。",
+    explanationPrompts: ["说说天平平衡时左右两边有什么关系。"],
+    starterLabelText: "天平平衡，说明 3 + 4 和 7 一样多。",
     constraints: {
       allowedToolCategories: ["common", "numbers"],
       allowDeleteStarterObjects: false
@@ -355,6 +371,8 @@ export const LESSON_CARDS: LessonCard[] = [
     topic: "代数",
     description: "用两个 x 砖和三个 1 砖表示表达式 2x + 3。",
     parentGuide: "让孩子先按形状分组，再把同类砖读成表达式。",
+    explanationPrompts: ["说说每一种砖分别表示表达式的哪一部分。"],
+    starterLabelText: "两个 x 砖是 2x，三个 1 砖是 +3。",
     constraints: {
       allowedToolCategories: ["common"],
       allowDeleteStarterObjects: false

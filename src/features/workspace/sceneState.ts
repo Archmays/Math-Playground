@@ -45,6 +45,12 @@ import {
 
 export type DemoObjectType = "demo-rectangle" | "demo-circle" | "demo-text";
 
+export interface AddDemoObjectOptions {
+  id?: string;
+  now?: string;
+  text?: string;
+}
+
 interface TangramPieceTemplate {
   shape: GeometryTileShape;
   width: number;
@@ -81,7 +87,7 @@ export type EditableObjectPatch = Partial<
 };
 
 export type WorkspaceAction =
-  | { type: "addDemoObject"; objectType: DemoObjectType }
+  | { type: "addDemoObject"; objectType: DemoObjectType; text?: string }
   | { type: "addNumberTile"; value: number }
   | { type: "addTenFrame"; filledCount: number }
   | { type: "addFractionBar"; numerator: number; denominator: number }
@@ -227,7 +233,7 @@ export function workspaceReducer(
 ): WorkspaceState {
   switch (action.type) {
     case "addDemoObject":
-      return addDemoObject(state, action.objectType);
+      return addDemoObject(state, action.objectType, { text: action.text });
     case "addNumberTile":
       return addNumberTile(state, action.value);
     case "addTenFrame":
@@ -312,12 +318,13 @@ export function workspaceReducer(
 export function addDemoObject(
   state: WorkspaceState,
   objectType: DemoObjectType,
-  options: { id?: string; now?: string } = {}
+  options: AddDemoObjectOptions = {}
 ): WorkspaceState {
   const object = createDemoObject(
     objectType,
     options.id,
-    state.scene.objects.length
+    state.scene.objects.length,
+    options.text
   );
 
   return commitScene(
@@ -1069,7 +1076,8 @@ export function redo(state: WorkspaceState): WorkspaceState {
 function createDemoObject(
   objectType: DemoObjectType,
   id = generateId(objectType),
-  index = 0
+  index = 0,
+  text = "数学"
 ): SceneObject {
   const x = 96 + (index % 4) * 160;
   const y = 96 + Math.floor(index / 4) * 128;
@@ -1111,7 +1119,7 @@ function createDemoObject(
         data: {
           width: 96,
           height: 40,
-          text: "数学"
+          text
         }
       });
   }

@@ -99,6 +99,10 @@ import {
 } from "./lessonConstraints";
 import { APP_VERSION } from "../../version";
 import { toggleLessonStepIndex } from "./lessonProgress";
+import {
+  clearLessonReflectionNote,
+  updateLessonReflectionNote
+} from "./lessonReflection";
 
 const AUTO_SAVE_INTERVAL_MS = 5000;
 const MIN_MANUAL_SCALE = 0.1;
@@ -138,6 +142,9 @@ export function Workspace() {
   const [visibleLessonHint, setVisibleLessonHint] = useState<string | null>(null);
   const [completedLessonSteps, setCompletedLessonSteps] = useState<
     Record<string, number[]>
+  >({});
+  const [lessonReflectionNotes, setLessonReflectionNotes] = useState<
+    Record<string, string>
   >({});
   const selectedLesson =
     LESSON_CARDS.find((lesson) => lesson.id === selectedLessonId) ?? null;
@@ -270,6 +277,9 @@ export function Workspace() {
       result.scene.objects.map((object) => object.id)
     );
     setCompletedLessonSteps((steps) => ({ ...steps, [lesson.id]: [] }));
+    setLessonReflectionNotes((notes) =>
+      clearLessonReflectionNote(notes, lesson.id)
+    );
     setLessonCheckResult(null);
     setVisibleLessonHint(null);
     setLessonHintIndex(0);
@@ -289,6 +299,9 @@ export function Workspace() {
       lesson.starterScene.objects.map((object) => object.id)
     );
     setCompletedLessonSteps((steps) => ({ ...steps, [lesson.id]: [] }));
+    setLessonReflectionNotes((notes) =>
+      clearLessonReflectionNote(notes, lesson.id)
+    );
     setLessonCheckResult(null);
     setVisibleLessonHint(null);
     setLessonHintIndex(0);
@@ -325,6 +338,21 @@ export function Workspace() {
         [lesson.id]: toggleLessonStepIndex(currentSteps, stepIndex)
       };
     });
+  };
+
+  const addExplanationLabel = (lesson: LessonCard) => {
+    if (!lesson.starterLabelText) {
+      return;
+    }
+
+    addDemoObject("demo-text", { text: lesson.starterLabelText });
+    setFileMessage("已添加解释标签。");
+  };
+
+  const updateLessonReflection = (lesson: LessonCard, note: string) => {
+    setLessonReflectionNotes((notes) =>
+      updateLessonReflectionNote(notes, lesson.id, note)
+    );
   };
 
   const addCustomNumberTile = () => {
@@ -582,6 +610,7 @@ export function Workspace() {
             isActive={activeLessonId === selectedLesson.id}
             completedStepIndexes={completedLessonSteps[selectedLesson.id] ?? []}
             checkResult={lessonCheckResult}
+            reflectionNote={lessonReflectionNotes[selectedLesson.id] ?? ""}
             toolSummary={getLessonToolSummary(selectedLesson, TOOL_CATEGORIES)}
             visibleHint={visibleLessonHint}
             onCheck={checkCurrentLesson}
@@ -589,6 +618,8 @@ export function Workspace() {
             onShowHint={showLessonHint}
             onStart={startLesson}
             onToggleStep={toggleLessonStep}
+            onAddExplanationLabel={addExplanationLabel}
+            onReflectionNoteChange={updateLessonReflection}
           />
         ) : null}
         {selectedObject ? (
@@ -980,23 +1011,27 @@ function ObjectInspector({
   );
 }
 
-function LessonPreview({
+export function LessonPreview({
   lesson,
   isActive,
   completedStepIndexes,
   checkResult,
+  reflectionNote,
   toolSummary,
   visibleHint,
   onCheck,
   onReset,
   onShowHint,
   onStart,
-  onToggleStep
+  onToggleStep,
+  onAddExplanationLabel,
+  onReflectionNoteChange
 }: {
   lesson: LessonCard;
   isActive: boolean;
   completedStepIndexes: number[];
   checkResult: LessonCheckResult | null;
+  reflectionNote: string;
   toolSummary: string;
   visibleHint: string | null;
   onCheck: (lesson: LessonCard) => void;
@@ -1004,7 +1039,12 @@ function LessonPreview({
   onShowHint: (lesson: LessonCard) => void;
   onStart: (lesson: LessonCard) => void;
   onToggleStep: (lesson: LessonCard, stepIndex: number) => void;
+  onAddExplanationLabel: (lesson: LessonCard) => void;
+  onReflectionNoteChange: (lesson: LessonCard, note: string) => void;
 }) {
+  const hasExplanationPrompts =
+    lesson.explanationPrompts && lesson.explanationPrompts.length > 0;
+
   return (
     <section className="lesson-preview">
       <div className="lesson-preview-header">
@@ -1042,6 +1082,27 @@ function LessonPreview({
           <li key={prompt}>{prompt}</li>
         ))}
       </ul>
+      <label className="lesson-reflection-note">
+        <span>本次复盘</span>
+        <textarea
+          value={reflectionNote}
+          placeholder="写下孩子今天说清楚的一句话。"
+          rows={3}
+          onChange={(event) =>
+            onReflectionNoteChange(lesson, event.target.value)
+          }
+        />
+      </label>
+      {hasExplanationPrompts ? (
+        <>
+          <h4>说一说/写一写</h4>
+          <ul>
+            {lesson.explanationPrompts?.map((prompt) => (
+              <li key={prompt}>{prompt}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
       {checkResult ? (
         <p
           className={
@@ -1089,6 +1150,16 @@ function LessonPreview({
             onClick={() => onReset(lesson)}
           >
             重置任务
+          </button>
+        ) : null}
+        {isActive && lesson.starterLabelText ? (
+          <button
+            type="button"
+            className="property-action-button"
+            aria-label={`添加解释标签：${lesson.title}`}
+            onClick={() => onAddExplanationLabel(lesson)}
+          >
+            添加解释标签
           </button>
         ) : null}
       </div>

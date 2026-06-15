@@ -483,6 +483,20 @@ textarea:focus-visible,
   min-width: 0;
 }
 
+.lesson-reflection-note {
+  display: grid;
+  gap: 6px;
+}
+
+.lesson-reflection-note span {
+  font-weight: 850;
+}
+
+.lesson-reflection-note textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
 .lesson-actions {
   display: grid;
   gap: 8px;

@@ -10,6 +10,7 @@ import type { Point, Scene, Viewport } from "../../core/scene";
 import {
   initialWorkspaceState,
   workspaceReducer,
+  type AddDemoObjectOptions,
   type DemoObjectType,
   type EditableObjectPatch
 } from "./sceneState";
@@ -24,7 +25,10 @@ import type { MeasurementToolKind } from "../../manipulatives/measurementTools/m
 interface SceneContextValue {
   scene: Scene;
   selectedObjectIds: string[];
-  addDemoObject: (objectType: DemoObjectType) => void;
+  addDemoObject: (
+    objectType: DemoObjectType,
+    options?: Pick<AddDemoObjectOptions, "text">
+  ) => void;
   addNumberTile: (value: number) => void;
   addTenFrame: (filledCount: number) => void;
   addFractionBar: (numerator: number, denominator: number) => void;
@@ -77,9 +81,15 @@ const SceneContext = createContext<SceneContextValue | null>(null);
 export function SceneProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
 
-  const addDemoObject = useCallback((objectType: DemoObjectType) => {
-    dispatch({ type: "addDemoObject", objectType });
-  }, []);
+  const addDemoObject = useCallback(
+    (
+      objectType: DemoObjectType,
+      options: Pick<AddDemoObjectOptions, "text"> = {}
+    ) => {
+      dispatch({ type: "addDemoObject", objectType, text: options.text });
+    },
+    []
+  );
 
   const addNumberTile = useCallback((value: number) => {
     dispatch({ type: "addNumberTile", value });
