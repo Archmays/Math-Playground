@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MathCanvas } from "../../canvas/MathCanvas";
+import { shouldPreserveObjectAspectRatio } from "../../canvas/objectAspectRatio";
 import { AppHeader } from "../../components/AppHeader";
 import type { SceneObject } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
@@ -106,6 +107,7 @@ export function Workspace() {
     addFractionBar,
     addFractionCircle,
     addGeometryTile,
+    addTangramSet,
     addMeasurementTool,
     addBalanceScale,
     addAlgebraTile,
@@ -344,6 +346,7 @@ export function Workspace() {
     "geometry-circle": () => addGeometryTile("circle"),
     "geometry-trapezoid": () => addGeometryTile("trapezoid"),
     "geometry-parallelogram": () => addGeometryTile("parallelogram"),
+    "geometry-tangram": addTangramSet,
     "measurement-ruler": () => addMeasurementTool("ruler"),
     "measurement-protractor": () => addMeasurementTool("protractor"),
     "measurement-angle": () => addMeasurementTool("angleMarker"),
@@ -568,8 +571,180 @@ function ToolButton({
       aria-label={copy.ariaLabel}
       onClick={onClick}
     >
-      {copy.label}
+      <ToolIcon name={copy.icon} />
+      <span className="tool-button-copy">
+        <span>{copy.label}</span>
+        <small>{copy.englishLabel}</small>
+      </span>
     </button>
+  );
+}
+
+function ToolIcon({ name }: { name: string }) {
+  const commonProps = {
+    className: `tool-icon tool-icon-${name}`,
+    viewBox: "0 0 32 32",
+    "aria-hidden": true,
+    focusable: false
+  };
+
+  if (name === "circle" || name === "fraction-circle") {
+    return (
+      <svg {...commonProps}>
+        <circle cx="16" cy="16" r="11" />
+        {name === "fraction-circle" ? <path d="M16 5 A11 11 0 0 1 27 16 L16 16 Z" /> : null}
+      </svg>
+    );
+  }
+
+  if (name === "triangle") {
+    return (
+      <svg {...commonProps}>
+        <path d="M16 5 L28 26 H4 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "square" || name === "algebra" || name === "algebra-x") {
+    return (
+      <svg {...commonProps}>
+        <rect x="7" y="7" width="18" height="18" rx="3" />
+        {name === "algebra-x" ? <text x="16" y="21">x</text> : null}
+      </svg>
+    );
+  }
+
+  if (name === "algebra-x2") {
+    return (
+      <svg {...commonProps}>
+        <rect x="6" y="6" width="20" height="20" rx="3" />
+        <text x="16" y="21">x²</text>
+      </svg>
+    );
+  }
+
+  if (name === "rectangle" || name === "fraction-bar") {
+    return (
+      <svg {...commonProps}>
+        <rect x="4" y="10" width="24" height="12" rx="3" />
+        {name === "fraction-bar" ? <line x1="16" y1="10" x2="16" y2="22" /> : null}
+      </svg>
+    );
+  }
+
+  if (name === "hexagon") {
+    return (
+      <svg {...commonProps}>
+        <path d="M10 5 H22 L29 16 L22 27 H10 L3 16 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "trapezoid") {
+    return (
+      <svg {...commonProps}>
+        <path d="M10 8 H22 L28 24 H4 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "parallelogram") {
+    return (
+      <svg {...commonProps}>
+        <path d="M11 8 H28 L21 24 H4 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "tangram") {
+    return (
+      <svg {...commonProps}>
+        <path d="M4 4 L18 18 H4 Z" />
+        <path d="M4 28 L18 18 H4 Z" />
+        <path d="M28 4 V18 H14 Z" />
+        <path d="M18 18 L28 18 L28 28 Z" />
+        <path d="M18 18 L28 28 H18 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "ruler") {
+    return (
+      <svg {...commonProps}>
+        <rect x="4" y="11" width="24" height="10" rx="2" />
+        <line x1="9" y1="11" x2="9" y2="17" />
+        <line x1="14" y1="11" x2="14" y2="15" />
+        <line x1="19" y1="11" x2="19" y2="17" />
+        <line x1="24" y1="11" x2="24" y2="15" />
+      </svg>
+    );
+  }
+
+  if (name === "protractor") {
+    return (
+      <svg {...commonProps}>
+        <path d="M5 24 A11 11 0 0 1 27 24 Z" />
+        <line x1="16" y1="24" x2="23" y2="15" />
+      </svg>
+    );
+  }
+
+  if (name === "angle") {
+    return (
+      <svg {...commonProps}>
+        <path d="M8 24 H25" />
+        <path d="M8 24 L22 10" />
+        <path d="M14 24 A6 6 0 0 1 12 19" />
+      </svg>
+    );
+  }
+
+  if (name === "line") {
+    return (
+      <svg {...commonProps}>
+        <line x1="6" y1="16" x2="26" y2="16" />
+        <circle cx="6" cy="16" r="3" />
+        <circle cx="26" cy="16" r="3" />
+      </svg>
+    );
+  }
+
+  if (name === "balance") {
+    return (
+      <svg {...commonProps}>
+        <line x1="16" y1="8" x2="16" y2="26" />
+        <line x1="7" y1="12" x2="25" y2="12" />
+        <path d="M8 12 L4 21 H12 Z" />
+        <path d="M24 12 L20 21 H28 Z" />
+      </svg>
+    );
+  }
+
+  if (name === "save" || name === "open" || name === "export" || name === "trash") {
+    return (
+      <svg {...commonProps}>
+        <rect x="7" y="6" width="18" height="20" rx="3" />
+        {name === "open" ? <path d="M10 15 H22 M16 9 V21" /> : null}
+        {name === "export" ? <path d="M16 20 V8 M11 13 L16 8 L21 13" /> : null}
+        {name === "trash" ? <path d="M10 11 H22 M13 11 V24 M19 11 V24" /> : null}
+        {name === "save" ? <path d="M11 8 H21 V14 H11 Z M11 21 H21" /> : null}
+      </svg>
+    );
+  }
+
+  if (name === "text") {
+    return (
+      <svg {...commonProps}>
+        <path d="M8 9 H24 M16 9 V25" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...commonProps}>
+      <rect x="7" y="7" width="18" height="18" rx="5" />
+      <text x="16" y="21">{name === "five" ? "5" : name === "ten" ? "10" : "1"}</text>
+    </svg>
   );
 }
 
@@ -617,6 +792,8 @@ function ObjectInspector({
   onAddRotationMarker: () => void;
   onChange: (patch: EditableObjectPatch) => void;
 }) {
+  const shouldKeepAspectRatio = shouldPreserveObjectAspectRatio(object);
+
   return (
     <div className="property-form">
       <NumberPropertyField
@@ -638,13 +815,25 @@ function ObjectInspector({
         label="横向缩放"
         value={object.scaleX}
         min={MIN_MANUAL_SCALE}
-        onChange={(value) => onChange({ scaleX: value })}
+        onChange={(value) =>
+          onChange(
+            shouldKeepAspectRatio
+              ? { scaleX: value, scaleY: value }
+              : { scaleX: value }
+          )
+        }
       />
       <NumberPropertyField
         label="纵向缩放"
         value={object.scaleY}
         min={MIN_MANUAL_SCALE}
-        onChange={(value) => onChange({ scaleY: value })}
+        onChange={(value) =>
+          onChange(
+            shouldKeepAspectRatio
+              ? { scaleX: value, scaleY: value }
+              : { scaleY: value }
+          )
+        }
       />
       <label className="property-field">
         <span>名称</span>

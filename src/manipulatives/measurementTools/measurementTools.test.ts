@@ -4,6 +4,7 @@ import { deserializeScene, serializeScene } from "../../core/sceneSerialization"
 import {
   createMeasurementTool,
   formatDegreeLabel,
+  formatLengthLabel,
   generateRulerTicks,
   normalizeAngle,
   normalizeProtractorAngle,
@@ -22,6 +23,12 @@ describe("measurement tools", () => {
     expect(formatDegreeLabel(45)).toBe("45°");
     expect(formatDegreeLabel(90.4)).toBe("90°");
     expect(formatDegreeLabel(-30)).toBe("330°");
+  });
+
+  it("formats visible grid lengths in child-facing units", () => {
+    expect(formatLengthLabel(160, "grid")).toBe("10 格");
+    expect(formatLengthLabel(192, "grid")).toBe("12 格");
+    expect(formatLengthLabel(24, "custom")).toBe("24");
   });
 
   it("generates ruler ticks with major ticks on whole units", () => {
@@ -53,6 +60,25 @@ describe("measurement tools", () => {
     const updated = updateMeasurementToolData(protractor, { angle: 240 });
 
     expect(updated.data.angle).toBe(180);
+  });
+
+  it("starts angle tools with a visible 30 degree reading", () => {
+    const angleMarker = createMeasurementTool({
+      id: "angle-marker-default",
+      kind: "angleMarker"
+    });
+    const protractor = createMeasurementTool({
+      id: "protractor-default",
+      kind: "protractor"
+    });
+
+    expect(angleMarker).toMatchObject({
+      label: "30°",
+      data: { angle: 30 }
+    });
+    expect(protractor).toMatchObject({
+      data: { angle: 30 }
+    });
   });
 
   it("serializes and deserializes MeasurementTool data through scene JSON", () => {

@@ -45,12 +45,13 @@ export interface GeometryTileMeasurements {
 }
 
 const MIN_TILE_SIZE = 24;
+const EQUILATERAL_TRIANGLE_ASPECT_RATIO = 2 / Math.sqrt(3);
 
 const DEFAULT_DIMENSIONS: Record<
   GeometryTileShape,
   { width: number; height: number; sides?: number }
 > = {
-  triangle: { width: 96, height: 84, sides: 3 },
+  triangle: { width: 96, height: 83, sides: 3 },
   square: { width: 80, height: 80, sides: 4 },
   rectangle: { width: 128, height: 80, sides: 4 },
   hexagon: { width: 104, height: 90, sides: 6 },
@@ -69,20 +70,35 @@ const SHAPE_LABELS: Record<GeometryTileShape, string> = {
   parallelogram: "平行四边形"
 };
 
+const DEFAULT_COLOR_SCHEMES: Record<GeometryTileShape, string> = {
+  triangle: "coral",
+  square: "gold",
+  rectangle: "sky",
+  hexagon: "green",
+  circle: "blue",
+  trapezoid: "purple",
+  parallelogram: "rose"
+};
+
 export function createGeometryTile(
   options: CreateGeometryTileOptions = {}
 ): SceneObject<GeometryTileData> {
   const shape = options.shape ?? "square";
   const defaults = DEFAULT_DIMENSIONS[shape];
-  const width = normalizeDimension(options.width ?? defaults.width);
-  const height = normalizeDimension(options.height ?? defaults.height);
+  const { width, height } = normalizeDimensionsForShape(
+    shape,
+    options.width,
+    options.height,
+    defaults.width,
+    defaults.height
+  );
   const data: GeometryTileData = {
     shape,
     width,
     height,
     showLabel: options.showLabel ?? true,
     showVertices: options.showVertices ?? false,
-    colorScheme: options.colorScheme ?? "auto"
+    colorScheme: options.colorScheme ?? DEFAULT_COLOR_SCHEMES[shape]
   };
   const sides = options.sides ?? defaults.sides;
 
@@ -106,8 +122,13 @@ export function updateGeometryTileData(
 ): SceneObject<GeometryTileData> {
   const shape = data.shape ?? object.data.shape;
   const defaults = DEFAULT_DIMENSIONS[shape];
-  const width = normalizeDimension(data.width ?? object.data.width);
-  const height = normalizeDimension(data.height ?? object.data.height);
+  const { width, height } = normalizeDimensionsForShape(
+    shape,
+    data.width,
+    data.height,
+    object.data.width ?? defaults.width,
+    object.data.height ?? defaults.height
+  );
   const sides = data.sides ?? defaults.sides;
   const nextData: GeometryTileData = {
     ...object.data,
@@ -128,6 +149,31 @@ export function updateGeometryTileData(
     label: object.label === SHAPE_LABELS[object.data.shape] ? SHAPE_LABELS[shape] : object.label,
     data: nextData
   };
+}
+
+export function isFixedAspectGeometryTileShape(
+  shape: GeometryTileShape
+): boolean {
+  return (
+    shape === "circle" ||
+    shape === "square" ||
+    shape === "triangle" ||
+    shape === "hexagon"
+  );
+}
+
+export function getGeometryTileAspectRatio(shape: GeometryTileShape): number {
+  if (shape === "circle" || shape === "square") {
+    return 1;
+  }
+
+  if (shape === "triangle") {
+    return EQUILATERAL_TRIANGLE_ASPECT_RATIO;
+  }
+
+  const defaults = DEFAULT_DIMENSIONS[shape];
+
+  return defaults.width / defaults.height;
 }
 
 export function getGeometryTileMeasurements(
@@ -211,4 +257,29 @@ function normalizeDimension(value: number): number {
   }
 
   return Math.max(MIN_TILE_SIZE, Math.trunc(value));
+}
+
+function normalizeDimensionsForShape(
+  shape: GeometryTileShape,
+  requestedWidth: number | undefined,
+  requestedHeight: number | undefined,
+  fallbackWidth: number,
+  fallbackHeight: number
+) {
+  let width = normalizeDimension(requestedWidth ?? fallbackWidth);
+  let height = normalizeDimension(requestedHeight ?? fallbackHeight);
+
+  if (!isFixedAspectGeometryTileShape(shape)) {
+    return { width, height };
+  }
+
+  const aspectRatio = getGeometryTileAspectRatio(shape);
+
+  if (requestedWidth === undefined && requestedHeight !== undefined) {
+    width = normalizeDimension(Math.round(height * aspectRatio));
+  } else {
+    height = normalizeDimension(Math.round(width / aspectRatio));
+  }
+
+  return { width, height };
 }

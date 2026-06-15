@@ -13,6 +13,7 @@ import {
   addFractionCircle,
   addGeometryTile,
   addMeasurementTool,
+  addTangramSet,
   addSelectedGeometryRotationMarker,
   addTenFrame,
   duplicateObject,
@@ -170,6 +171,39 @@ describe("workspace scene selection state", () => {
       }
     });
     expect(state.selectedObjectIds).toEqual(["geometry-hexagon"]);
+  });
+
+  it("adds a seven-piece tangram set with distinct colors", () => {
+    const state = addTangramSet(createEmptyState(), {
+      ids: [
+        "tangram-large-1",
+        "tangram-large-2",
+        "tangram-medium",
+        "tangram-small-1",
+        "tangram-small-2",
+        "tangram-square",
+        "tangram-parallelogram"
+      ],
+      now: later
+    });
+    const colorSchemes = state.scene.objects.map((object) =>
+      String(object.data.colorScheme)
+    );
+
+    expect(state.scene.objects).toHaveLength(7);
+    expect(state.scene.objects.map((object) => object.type)).toEqual(
+      Array.from({ length: 7 }, () => "geometry-tile")
+    );
+    expect(new Set(colorSchemes).size).toBe(7);
+    expect(state.selectedObjectIds).toEqual([
+      "tangram-large-1",
+      "tangram-large-2",
+      "tangram-medium",
+      "tangram-small-1",
+      "tangram-small-2",
+      "tangram-square",
+      "tangram-parallelogram"
+    ]);
   });
 
   it("adds a measurement tool and selects it", () => {

@@ -27,6 +27,7 @@ import {
   type GeometryTileData
 } from "../manipulatives/geometryTiles/geometryTiles";
 import {
+  formatLengthLabel,
   formatDegreeLabel,
   generateRulerTicks,
   isMeasurementToolObject,
@@ -446,8 +447,9 @@ function RulerObject({
   object: SceneObject<MeasurementToolData>;
   box: { x: number; y: number; width: number; height: number };
 }) {
+  const visibleLength = object.data.length * object.scaleX;
   const ticks = object.data.showTicks
-    ? generateRulerTicks(object.data.length)
+    ? generateRulerTicks(visibleLength)
     : [];
 
   return (
@@ -461,7 +463,7 @@ function RulerObject({
         rx={4}
       />
       {ticks.map((tick) => {
-        const x = box.x + tick.offset * object.scaleX;
+        const x = box.x + tick.offset;
         const tickHeight = tick.major ? box.height * 0.72 : box.height * 0.44;
 
         return (
@@ -493,7 +495,7 @@ function RulerObject({
           dominantBaseline="middle"
           textAnchor="middle"
         >
-          {formatLengthLabel(object.data.length, object.data.unit)}
+          {formatLengthLabel(visibleLength, object.data.unit)}
         </text>
       ) : null}
     </>
@@ -516,20 +518,20 @@ function ProtractorObject({
     center.x,
     center.y,
     readingRadius,
-    180 - readingAngle
+    180 + readingAngle
   );
   const readingLabelPoint = pointOnCircle(
     center.x,
     center.y,
     Math.max(32, radius - 46),
-    180 - readingAngle / 2
+    180 + readingAngle / 2
   );
   const readingArcRadius = Math.max(22, radius - 36);
   const readingArcEnd = pointOnCircle(
     center.x,
     center.y,
     readingArcRadius,
-    180 - readingAngle
+    180 + readingAngle
   );
 
   return (
@@ -537,6 +539,10 @@ function ProtractorObject({
       <path
         className="measurement-protractor-body"
         d={`M ${center.x - radius} ${center.y} A ${radius} ${radius} 0 0 1 ${center.x + radius} ${center.y} L ${center.x - radius} ${center.y}`}
+      />
+      <path
+        className="measurement-protractor-inner-arc"
+        d={`M ${center.x - radius + 20} ${center.y} A ${radius - 20} ${radius - 20} 0 0 1 ${center.x + radius - 20} ${center.y}`}
       />
       <line
         className="measurement-protractor-baseline"
@@ -567,18 +573,18 @@ function ProtractorObject({
       {object.data.showTicks
         ? ticks.map((angle) => {
             const innerRadius = radius - (angle % 30 === 0 ? 16 : 10);
-            const outer = pointOnCircle(center.x, center.y, radius, 180 - angle);
+            const outer = pointOnCircle(center.x, center.y, radius, 180 + angle);
             const inner = pointOnCircle(
               center.x,
               center.y,
               innerRadius,
-              180 - angle
+              180 + angle
             );
             const labelPoint = pointOnCircle(
               center.x,
               center.y,
               radius - 28,
-              180 - angle
+              180 + angle
             );
 
             return (
@@ -590,17 +596,19 @@ function ProtractorObject({
                   x2={inner.x}
                   y2={inner.y}
                 />
-                {angle % 30 === 0 ? (
-                  <text
-                    className="measurement-protractor-number"
-                    x={labelPoint.x}
-                    y={labelPoint.y}
-                    dominantBaseline="middle"
-                    textAnchor="middle"
-                  >
-                    {angle}
-                  </text>
-                ) : null}
+                <text
+                  className={
+                    angle % 30 === 0
+                      ? "measurement-protractor-number measurement-protractor-number-major"
+                      : "measurement-protractor-number"
+                  }
+                  x={labelPoint.x}
+                  y={labelPoint.y}
+                  dominantBaseline="middle"
+                  textAnchor="middle"
+                >
+                  {angle}
+                </text>
               </g>
             );
           })
@@ -677,6 +685,7 @@ function LineSegmentObject({
   box: { x: number; y: number; width: number; height: number };
 }) {
   const y = box.y + box.height / 2;
+  const visibleLength = object.data.length * object.scaleX;
 
   return (
     <>
@@ -702,7 +711,7 @@ function LineSegmentObject({
           dominantBaseline="middle"
           textAnchor="middle"
         >
-          {formatLengthLabel(object.data.length, object.data.unit)}
+          {formatLengthLabel(visibleLength, object.data.unit)}
         </text>
       ) : null}
     </>
@@ -1124,6 +1133,27 @@ function getFractionCirclePalette(colorScheme: string) {
 }
 
 function getGeometryTilePalette(colorScheme: string) {
+  const palettes: Record<string, { fill: string; stroke: string }> = {
+    coral: { fill: "#ffd7c2", stroke: "#c94f2d" },
+    gold: { fill: "#ffe68a", stroke: "#a66b00" },
+    sky: { fill: "#cfefff", stroke: "#28758f" },
+    green: { fill: "#d7f0c2", stroke: "#4f8731" },
+    blue: { fill: "#d8e8ff", stroke: "#3f6faa" },
+    purple: { fill: "#eadcff", stroke: "#7654aa" },
+    rose: { fill: "#ffd8e4", stroke: "#b44a6c" },
+    "tangram-red": { fill: "#ff6f61", stroke: "#9f2f28" },
+    "tangram-orange": { fill: "#ffb347", stroke: "#9a5b00" },
+    "tangram-yellow": { fill: "#ffe66d", stroke: "#a48100" },
+    "tangram-green": { fill: "#68d391", stroke: "#2f7a4f" },
+    "tangram-cyan": { fill: "#4fd1c5", stroke: "#207c75" },
+    "tangram-blue": { fill: "#63b3ed", stroke: "#2b6c9f" },
+    "tangram-purple": { fill: "#b794f4", stroke: "#6b46a0" }
+  };
+
+  if (palettes[colorScheme]) {
+    return palettes[colorScheme];
+  }
+
   if (colorScheme === "warm") {
     return { fill: "#ffe2b8", stroke: "#b46a16" };
   }
@@ -1186,18 +1216,6 @@ function getGeometryTileVertices(
         { x: left, y: bottom }
       ];
   }
-}
-
-function formatLengthLabel(length: number, unit: string): string {
-  if (unit === "cm") {
-    return `${length} cm`;
-  }
-
-  if (unit === "custom") {
-    return `${length}`;
-  }
-
-  return `${length} grid`;
 }
 
 function pointOnCircle(

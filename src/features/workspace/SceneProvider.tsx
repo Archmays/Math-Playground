@@ -30,6 +30,7 @@ interface SceneContextValue {
   addFractionBar: (numerator: number, denominator: number) => void;
   addFractionCircle: (numerator: number, denominator: number) => void;
   addGeometryTile: (shape: GeometryTileShape) => void;
+  addTangramSet: () => void;
   addMeasurementTool: (kind: MeasurementToolKind) => void;
   addBalanceScale: (leftValue: number, rightValue: number) => void;
   addAlgebraTile: (tileKind: AlgebraTileKind, sign: AlgebraTileSign) => void;
@@ -98,6 +99,10 @@ export function SceneProvider({ children }: { children: ReactNode }) {
 
   const addGeometryTile = useCallback((shape: GeometryTileShape) => {
     dispatch({ type: "addGeometryTile", shape });
+  }, []);
+
+  const addTangramSet = useCallback(() => {
+    dispatch({ type: "addTangramSet" });
   }, []);
 
   const addMeasurementTool = useCallback((kind: MeasurementToolKind) => {
@@ -226,6 +231,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addFractionBar,
       addFractionCircle,
       addGeometryTile,
+      addTangramSet,
       addMeasurementTool,
       addBalanceScale,
       addAlgebraTile,
@@ -258,6 +264,7 @@ export function SceneProvider({ children }: { children: ReactNode }) {
       addFractionBar,
       addFractionCircle,
       addGeometryTile,
+      addTangramSet,
       addMeasurementTool,
       addBalanceScale,
       addAlgebraTile,

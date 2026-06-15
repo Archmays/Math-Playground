@@ -42,6 +42,17 @@ import {
 
 export type DemoObjectType = "demo-rectangle" | "demo-circle" | "demo-text";
 
+interface TangramPieceTemplate {
+  shape: GeometryTileShape;
+  width: number;
+  height: number;
+  x: number;
+  y: number;
+  rotation: number;
+  colorScheme: string;
+  label: string;
+}
+
 export interface WorkspaceState {
   scene: Scene;
   selectedObjectIds: string[];
@@ -73,6 +84,7 @@ export type WorkspaceAction =
   | { type: "addFractionBar"; numerator: number; denominator: number }
   | { type: "addFractionCircle"; numerator: number; denominator: number }
   | { type: "addGeometryTile"; shape: GeometryTileShape }
+  | { type: "addTangramSet" }
   | { type: "addMeasurementTool"; kind: MeasurementToolKind }
   | { type: "addBalanceScale"; leftValue: number; rightValue: number }
   | { type: "addAlgebraTile"; tileKind: AlgebraTileKind; sign: AlgebraTileSign }
@@ -115,6 +127,79 @@ const defaultViewport: Viewport = {
   zoom: 1
 };
 
+const TANGRAM_PIECES: TangramPieceTemplate[] = [
+  {
+    shape: "triangle",
+    width: 128,
+    height: 111,
+    x: 0,
+    y: 0,
+    rotation: 0,
+    colorScheme: "tangram-red",
+    label: "七巧板大三角 1"
+  },
+  {
+    shape: "triangle",
+    width: 128,
+    height: 111,
+    x: 118,
+    y: 0,
+    rotation: 90,
+    colorScheme: "tangram-orange",
+    label: "七巧板大三角 2"
+  },
+  {
+    shape: "triangle",
+    width: 96,
+    height: 83,
+    x: 78,
+    y: 96,
+    rotation: 180,
+    colorScheme: "tangram-yellow",
+    label: "七巧板中三角"
+  },
+  {
+    shape: "triangle",
+    width: 64,
+    height: 55,
+    x: 0,
+    y: 136,
+    rotation: 0,
+    colorScheme: "tangram-green",
+    label: "七巧板小三角 1"
+  },
+  {
+    shape: "triangle",
+    width: 64,
+    height: 55,
+    x: 178,
+    y: 136,
+    rotation: -90,
+    colorScheme: "tangram-cyan",
+    label: "七巧板小三角 2"
+  },
+  {
+    shape: "square",
+    width: 64,
+    height: 64,
+    x: 92,
+    y: 128,
+    rotation: 45,
+    colorScheme: "tangram-blue",
+    label: "七巧板正方形"
+  },
+  {
+    shape: "parallelogram",
+    width: 96,
+    height: 64,
+    x: 160,
+    y: 82,
+    rotation: 0,
+    colorScheme: "tangram-purple",
+    label: "七巧板平行四边形"
+  }
+];
+
 export const initialWorkspaceState: WorkspaceState = {
   scene: createScene({
     title: "我的操作板",
@@ -143,6 +228,8 @@ export function workspaceReducer(
       return addFractionCircle(state, action.numerator, action.denominator);
     case "addGeometryTile":
       return addGeometryTile(state, action.shape);
+    case "addTangramSet":
+      return addTangramSet(state);
     case "addMeasurementTool":
       return addMeasurementTool(state, action.kind);
     case "addBalanceScale":
@@ -347,6 +434,42 @@ export function addGeometryTile(
       objects: [...state.scene.objects, object]
     },
     [object.id]
+  );
+}
+
+export function addTangramSet(
+  state: WorkspaceState,
+  options: { ids?: string[]; now?: string } = {}
+): WorkspaceState {
+  const index = state.scene.objects.length;
+  const origin = {
+    x: 96 + (index % 2) * 320,
+    y: 96 + Math.floor(index / 2) * 224
+  };
+  const pieces = TANGRAM_PIECES.map((piece, pieceIndex) => ({
+    ...createGeometryTile({
+      id: options.ids?.[pieceIndex],
+      shape: piece.shape,
+      width: piece.width,
+      height: piece.height,
+      showLabel: false,
+      showVertices: false,
+      colorScheme: piece.colorScheme,
+      x: origin.x + piece.x,
+      y: origin.y + piece.y,
+      label: piece.label
+    }),
+    rotation: piece.rotation
+  }));
+
+  return commitScene(
+    state,
+    {
+      ...state.scene,
+      updatedAt: options.now ?? new Date().toISOString(),
+      objects: [...state.scene.objects, ...pieces]
+    },
+    pieces.map((object) => object.id)
   );
 }
 

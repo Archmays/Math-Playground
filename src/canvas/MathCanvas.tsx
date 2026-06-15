@@ -25,6 +25,7 @@ import {
 } from "./canvasUtils";
 import type { CanvasSize, Point } from "./canvasTypes";
 import { snapRotationAngle } from "../manipulatives/geometryTiles/geometryTiles";
+import { shouldKeepAspectRatioForObjects } from "./objectAspectRatio";
 
 const defaultCanvasSize: CanvasSize = {
   width: 960,
@@ -69,6 +70,8 @@ type DragState =
     }
   | null;
 
+export type ResizeDragState = Extract<DragState, { mode: "resize" }>;
+
 export function MathCanvas() {
   const {
     scene,
@@ -85,8 +88,7 @@ export function MathCanvas() {
     transformObjects,
     toggleTenFrameCell,
     deleteSelectedObjects,
-    duplicateSelectedObjects
-    ,
+    duplicateSelectedObjects,
     copySelectedObjects,
     pasteObjects,
     undo,
@@ -168,6 +170,16 @@ export function MathCanvas() {
         return;
       }
 
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        selectObjects(
+          scene.objects
+            .filter((object) => object.visible)
+            .map((object) => object.id)
+        );
+        return;
+      }
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
         event.preventDefault();
         pasteObjects();
@@ -205,6 +217,8 @@ export function MathCanvas() {
     duplicateSelectedObjects,
     pasteObjects,
     redo,
+    scene.objects,
+    selectObjects,
     undo
   ]);
 
@@ -529,16 +543,20 @@ function isObjectEvent(target: EventTarget): boolean {
   return target instanceof Element && Boolean(target.closest("[data-object-id]"));
 }
 
-function resizeObjectsFromDrag(
-  dragState: Extract<DragState, { mode: "resize" }>,
+export function resizeObjectsFromDrag(
+  dragState: ResizeDragState,
   pointer: Point,
   keepRatio: boolean
 ): Record<string, SceneObject> {
+  const shouldKeepRatio = shouldKeepAspectRatioForResize(
+    Object.values(dragState.startObjects),
+    keepRatio
+  );
   const nextBox = getResizedBox(
     dragState.startBox,
     dragState.handle,
     pointer,
-    keepRatio
+    shouldKeepRatio
   );
   const scaleX = nextBox.width / dragState.startBox.width;
   const scaleY = nextBox.height / dragState.startBox.height;
@@ -559,6 +577,13 @@ function resizeObjectsFromDrag(
       ];
     })
   );
+}
+
+export function shouldKeepAspectRatioForResize(
+  objects: SceneObject[],
+  requestedKeepRatio: boolean
+): boolean {
+  return shouldKeepAspectRatioForObjects(objects, requestedKeepRatio);
 }
 
 function rotateObjectsFromDrag(

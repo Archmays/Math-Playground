@@ -59,13 +59,14 @@ const PROTRACTOR_WIDTH = 220;
 const PROTRACTOR_HEIGHT = 120;
 const ANGLE_MARKER_SIZE = 112;
 const LINE_SEGMENT_HEIGHT = 24;
+const GRID_DISPLAY_UNIT = 16;
 
 export function createMeasurementTool(
   options: CreateMeasurementToolOptions = {}
 ): SceneObject<MeasurementToolData> {
   const kind = options.kind ?? "ruler";
   const length = normalizeLength(options.length ?? getDefaultLength(kind));
-  const angle = normalizeMeasurementAngle(kind, options.angle ?? 0);
+  const angle = normalizeMeasurementAngle(kind, options.angle ?? getDefaultAngle(kind));
   const startPoint = options.startPoint ?? { x: 0, y: 0 };
   const endPoint = options.endPoint ?? { x: length, y: 0 };
   const size = getDefaultSize(kind, length);
@@ -144,6 +145,20 @@ function normalizeMeasurementAngle(
 
 export function formatDegreeLabel(angle: number): string {
   return `${normalizeAngle(angle)}°`;
+}
+
+export function formatLengthLabel(length: number, unit: MeasurementUnit): string {
+  const safeLength = normalizeLength(length);
+
+  if (unit === "cm") {
+    return `${formatLengthNumber(safeLength)} cm`;
+  }
+
+  if (unit === "custom") {
+    return formatLengthNumber(safeLength);
+  }
+
+  return `${formatLengthNumber(safeLength / GRID_DISPLAY_UNIT)} 格`;
 }
 
 export function generateRulerTicks(
@@ -237,6 +252,10 @@ function getDefaultLength(kind: MeasurementToolKind): number {
   return DEFAULT_LENGTH;
 }
 
+function getDefaultAngle(kind: MeasurementToolKind): number {
+  return kind === "angleMarker" || kind === "protractor" ? 30 : 0;
+}
+
 function getDefaultSize(kind: MeasurementToolKind, length: number) {
   switch (kind) {
     case "ruler":
@@ -256,6 +275,10 @@ function normalizeLength(length: number): number {
   }
 
   return Math.max(16, Math.trunc(length));
+}
+
+function formatLengthNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 function isPoint(value: unknown): value is MeasurementPoint {

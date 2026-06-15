@@ -3,8 +3,10 @@ import { createScene } from "../../core/scene";
 import { deserializeScene, serializeScene } from "../../core/sceneSerialization";
 import {
   createGeometryTile,
+  getGeometryTileAspectRatio,
   getGeometryTileMeasurements,
-  snapRotationAngle
+  snapRotationAngle,
+  updateGeometryTileData
 } from "./geometryTiles";
 
 describe("geometry tiles", () => {
@@ -43,6 +45,40 @@ describe("geometry tiles", () => {
     expect(snapRotationAngle(23)).toBe(30);
     expect(snapRotationAngle(-8)).toBe(-15);
     expect(snapRotationAngle(23, true)).toBe(23);
+  });
+
+  it("keeps circle and square geometry tiles proportional when dimensions change", () => {
+    const square = createGeometryTile({
+      shape: "square",
+      width: 80,
+      height: 80
+    });
+    const circle = createGeometryTile({
+      shape: "circle",
+      width: 88,
+      height: 88
+    });
+
+    expect(updateGeometryTileData(square, { width: 120 }).data).toMatchObject({
+      width: 120,
+      height: 120
+    });
+    expect(updateGeometryTileData(circle, { height: 144 }).data).toMatchObject({
+      width: 144,
+      height: 144
+    });
+  });
+
+  it("uses an equilateral triangle aspect ratio when triangle dimensions change", () => {
+    const triangle = createGeometryTile({
+      shape: "triangle",
+      width: 96,
+      height: 83
+    });
+    const updated = updateGeometryTileData(triangle, { width: 120 });
+
+    expect(getGeometryTileAspectRatio("triangle")).toBeCloseTo(2 / Math.sqrt(3));
+    expect(updated.data.height).toBe(104);
   });
 
   it("calculates rectangle area and perimeter", () => {

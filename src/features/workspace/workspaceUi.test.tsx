@@ -36,6 +36,7 @@ describe("workspace UI copy", () => {
       "fraction-bar-half",
       "fraction-circle-half",
       "geometry-square",
+      "geometry-tangram",
       "measurement-ruler",
       "balance-empty",
       "algebra-x2-positive",
@@ -46,8 +47,18 @@ describe("workspace UI copy", () => {
       const copy = getToolButtonCopy(id);
 
       expect(copy.label.length).toBeGreaterThan(0);
+      expect(copy.englishLabel.length).toBeGreaterThan(0);
+      expect(copy.icon.length).toBeGreaterThan(0);
       expect(copy.ariaLabel.length).toBeGreaterThan(0);
     }
+  });
+
+  it("uses the geometry tools instead of duplicate demo shape buttons", () => {
+    const geometry = TOOL_CATEGORIES.find((category) => category.id === "geometry");
+
+    expect(geometry?.buttonIds).toContain("geometry-tangram");
+    expect(geometry?.buttonIds).not.toContain("demo-rectangle");
+    expect(geometry?.buttonIds).not.toContain("demo-circle");
   });
 
   it("provides short help steps for the main classroom workflow", () => {
