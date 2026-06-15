@@ -80,8 +80,10 @@ import { useScene } from "./SceneProvider";
 import type { EditableObjectPatch } from "./sceneState";
 import {
   LOCAL_SCENE_STORAGE_KEY,
+  createSceneShareText,
   exportScenePng,
   exportSceneSvg,
+  parseSceneShareText,
   parseAutoSavedScene,
   saveSceneJson
 } from "./sceneFileUtils";
@@ -261,6 +263,46 @@ export function Workspace() {
   const clearLocalSave = () => {
     window.localStorage.removeItem(LOCAL_SCENE_STORAGE_KEY);
     setFileMessage("已清空本地自动保存。");
+  };
+
+  const copyShareText = () => {
+    const shareText = createSceneShareText(scene);
+
+    navigator.clipboard
+      ?.writeText(shareText)
+      .then(() => setFileMessage("已复制分享文本。"))
+      .catch(() => {
+        window.prompt("请复制这段分享文本", shareText);
+        setFileMessage("请复制弹窗里的分享文本。");
+      });
+  };
+
+  const importShareText = () => {
+    const input = window.prompt("请粘贴分享文本");
+
+    if (input === null) {
+      return;
+    }
+
+    const result = parseSceneShareText(input);
+
+    if (!result.ok) {
+      setFileMessage(result.error);
+      return;
+    }
+
+    const confirmed =
+      scene.objects.length === 0 ||
+      window.confirm("导入分享文本会覆盖当前画布，是否继续？");
+
+    if (!confirmed) {
+      return;
+    }
+
+    loadScene(result.scene);
+    setActiveLessonId(null);
+    setActiveLessonStarterObjectIds([]);
+    setFileMessage("已导入分享文本。");
   };
 
   const startLesson = (lesson: LessonCard) => {
@@ -468,6 +510,8 @@ export function Workspace() {
       setFileMessage("已保存 JSON 画布文件。");
     },
     "file-load-json": () => fileInputRef.current?.click(),
+    "file-copy-share": copyShareText,
+    "file-import-share": importShareText,
     "file-export-svg": () => {
       exportSceneSvg(scene);
       setFileMessage("已导出 SVG 图片。");

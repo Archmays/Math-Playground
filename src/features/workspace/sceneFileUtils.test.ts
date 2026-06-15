@@ -3,7 +3,12 @@ import { createScene } from "../../core/scene";
 import { serializeScene } from "../../core/sceneSerialization";
 import { createCoordinateGrid } from "../../manipulatives/coordinateGrid/coordinateGrid";
 import { createNumberLine } from "../../manipulatives/numberLine/numberLine";
-import { parseAutoSavedScene, sceneToSvgString } from "./sceneFileUtils";
+import {
+  createSceneShareText,
+  parseAutoSavedScene,
+  parseSceneShareText,
+  sceneToSvgString
+} from "./sceneFileUtils";
 
 describe("workspace auto save restore", () => {
   it("returns empty when no auto-save text exists", () => {
@@ -43,6 +48,33 @@ describe("workspace auto save restore", () => {
 
     expect(svg).toContain('data-object-type="coordinate-grid"');
     expect(svg).toContain(">0<");
+  });
+});
+
+describe("workspace scene sharing", () => {
+  it("round-trips a scene through share text", () => {
+    const scene = createScene({
+      id: "share-scene",
+      title: "家庭练习",
+      now: "2026-06-15T00:00:00.000Z",
+      objects: [createNumberLine({ id: "line-1" })]
+    });
+
+    const shareText = createSceneShareText(scene);
+    const parsed = parseSceneShareText(shareText);
+
+    expect(shareText).toMatch(/^math-playground-scene:/);
+    expect(parsed).toEqual({
+      ok: true,
+      scene
+    });
+  });
+
+  it("rejects invalid share text without producing a scene", () => {
+    expect(parseSceneShareText("not a share text")).toEqual({
+      ok: false,
+      error: "分享文本格式不正确。"
+    });
   });
 });
 

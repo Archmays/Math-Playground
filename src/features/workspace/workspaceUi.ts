@@ -72,6 +72,8 @@ export const TOOL_BUTTONS: ToolButtonCopy[] = [
   { id: "demo-text", label: "文字标签", englishLabel: "Text Label", icon: "text", ariaLabel: "添加文字标签" },
   { id: "file-save-json", label: "保存 JSON", englishLabel: "Save JSON", icon: "save", ariaLabel: "保存当前画布为 JSON 文件" },
   { id: "file-load-json", label: "读取 JSON", englishLabel: "Load JSON", icon: "open", ariaLabel: "从 JSON 文件读取画布" },
+  { id: "file-copy-share", label: "复制分享文本", englishLabel: "Copy Share Text", icon: "export", ariaLabel: "复制当前画布分享文本" },
+  { id: "file-import-share", label: "导入分享文本", englishLabel: "Import Share Text", icon: "open", ariaLabel: "导入画布分享文本" },
   { id: "file-export-svg", label: "导出 SVG", englishLabel: "Export SVG", icon: "export", ariaLabel: "导出当前画布为 SVG 图片" },
   { id: "file-export-png", label: "导出 PNG", englishLabel: "Export PNG", icon: "export", ariaLabel: "导出当前画布为 PNG 图片" },
   { id: "file-clear-local", label: "清空本地保存", englishLabel: "Clear Local Save", icon: "trash", ariaLabel: "清空本地自动保存的画布" }
@@ -162,6 +164,8 @@ export const TOOL_CATEGORIES: ToolCategoryCopy[] = [
     buttonIds: [
       "file-save-json",
       "file-load-json",
+      "file-copy-share",
+      "file-import-share",
       "file-export-svg",
       "file-export-png",
       "file-clear-local"

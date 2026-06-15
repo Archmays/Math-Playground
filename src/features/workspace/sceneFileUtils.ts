@@ -19,6 +19,12 @@ export type AutoSavedSceneParseResult =
   | { status: "ready"; scene: Scene }
   | { status: "error"; error: string };
 
+export type SharedSceneParseResult =
+  | { ok: true; scene: Scene }
+  | { ok: false; error: string };
+
+const SCENE_SHARE_PREFIX = "math-playground-scene:";
+
 export function parseAutoSavedScene(
   savedSceneText: string | null
 ): AutoSavedSceneParseResult {
@@ -41,6 +47,40 @@ export function parseAutoSavedScene(
     status: "ready",
     scene: result.scene
   };
+}
+
+export function createSceneShareText(scene: Scene): string {
+  return `${SCENE_SHARE_PREFIX}${encodeBase64(serializeScene(scene))}`;
+}
+
+export function parseSceneShareText(text: string): SharedSceneParseResult {
+  const trimmedText = text.trim();
+
+  if (!trimmedText.startsWith(SCENE_SHARE_PREFIX)) {
+    return {
+      ok: false,
+      error: "分享文本格式不正确。"
+    };
+  }
+
+  try {
+    const sceneText = decodeBase64(trimmedText.slice(SCENE_SHARE_PREFIX.length));
+    const result = deserializeScene(sceneText);
+
+    if (!result.ok) {
+      return result;
+    }
+
+    return {
+      ok: true,
+      scene: result.scene
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "分享文本格式不正确。"
+    };
+  }
 }
 
 export function saveSceneJson(scene: Scene, date = new Date()): void {
@@ -390,4 +430,22 @@ function escapeAttribute(value: string): string {
 
 function round(value: number): number {
   return Number(value.toFixed(2));
+}
+
+function encodeBase64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary);
+}
+
+function decodeBase64(value: string): string {
+  const binary = atob(value);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+
+  return new TextDecoder().decode(bytes);
 }

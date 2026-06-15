@@ -39,6 +39,8 @@ describe("workspace UI copy", () => {
         "measurement-protractor",
         "balance-empty",
         "algebra-x2-negative",
+        "file-copy-share",
+        "file-import-share",
         "file-export-png"
       ])
     );
@@ -59,6 +61,8 @@ describe("workspace UI copy", () => {
       "measurement-ruler",
       "balance-empty",
       "algebra-x2-positive",
+      "file-copy-share",
+      "file-import-share",
       "file-save-json"
     ];
 
